@@ -49,7 +49,7 @@ export default async function AdminPage() {
               <TableRow key={item.id}>
                 <TableCell>{item.serialNumber}</TableCell>
                 <TableCell>{item.sku}</TableCell>
-                <TableCell>{item.mintNumber}</TableCell>
+                <TableCell>#{item.mintNumber}</TableCell>
                 <TableCell>{item.currentOwnerName}</TableCell>
                 <TableCell className="font-mono text-sm">
                   <Link href={item.nfcLink} className="text-sky-600">

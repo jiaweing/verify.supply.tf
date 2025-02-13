@@ -19,7 +19,9 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-export default async function ItemPage(props: { params: Promise<{ id: string }> }) {
+export default async function ItemPage(props: {
+  params: Promise<{ id: string }>;
+}) {
   const params = await props.params;
   const isAuthenticated = await auth();
   if (!isAuthenticated) {
@@ -72,7 +74,7 @@ export default async function ItemPage(props: { params: Promise<{ id: string }> 
               </div>
               <div>
                 <dt className="font-medium">Mint Number</dt>
-                <dd className="text-gray-500">{item.mintNumber}</dd>
+                <dd className="text-gray-500">#{item.mintNumber}</dd>
               </div>
               <div>
                 <dt className="font-medium">Weight</dt>

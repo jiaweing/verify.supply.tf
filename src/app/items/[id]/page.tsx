@@ -77,7 +77,7 @@ export default async function ItemVerificationPage(props: {
             </div>
             <div>
               <dt className="font-medium">Mint Number</dt>
-              <dd className="text-gray-500">{item.mintNumber}</dd>
+              <dd className="text-gray-500">#{item.mintNumber}</dd>
             </div>
             <div>
               <dt className="font-medium">Weight</dt>
