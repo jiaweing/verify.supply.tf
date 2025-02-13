@@ -52,7 +52,9 @@ export default async function AdminPage() {
                 <TableCell>{item.mintNumber}</TableCell>
                 <TableCell>{item.currentOwnerName}</TableCell>
                 <TableCell className="font-mono text-sm">
-                  {item.nfcLink}
+                  <Link href={item.nfcLink} className="text-sky-600">
+                    {item.nfcLink}
+                  </Link>
                 </TableCell>
                 <TableCell>
                   <Button variant="outline" size="sm" asChild>

@@ -10,6 +10,12 @@ const transporter = nodemailer.createTransport({
     user: env.SMTP_USER,
     pass: env.SMTP_PASSWORD,
   },
+  tls: {
+    // Do not fail on invalid certificates
+    rejectUnauthorized: false,
+    // Explicitly set min version to TLS 1.2
+    minVersion: "TLSv1.2",
+  },
 });
 
 const companyName = "Supply Chain Verify";

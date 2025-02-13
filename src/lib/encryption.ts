@@ -1,3 +1,4 @@
+import { env } from "@/env.mjs";
 import crypto from "crypto";
 
 export class EncryptionService {
@@ -102,7 +103,7 @@ export class EncryptionService {
     const linkData = Buffer.concat([encrypted, iv, authTag]).toString(
       "base64url"
     );
-    return `verify.supply.tf/?key=${linkData}&version=${globalKeyVersion}`;
+    return `${env.NEXT_PUBLIC_APP_URL}/?key=${linkData}&version=${globalKeyVersion}`;
   }
 
   static async verifyNfcLink(

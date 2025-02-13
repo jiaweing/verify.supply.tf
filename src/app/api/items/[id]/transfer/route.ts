@@ -11,7 +11,10 @@ const TRANSFER_EXPIRY_HOURS = env.OWNERSHIP_TRANSFER_EXPIRY_HOURS
   ? env.OWNERSHIP_TRANSFER_EXPIRY_HOURS
   : 24;
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     // Validate session
@@ -102,7 +105,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     const { transferId, action } = await request.json();
@@ -154,26 +160,36 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         return Response.json({ error: "Item not found" }, { status: 404 });
       }
 
+      // Create block data with timestamp for this transfer
       const timestamp = new Date();
+      const blockData = {
+        blockId: item.blockId,
+        serialNumber: item.serialNumber,
+        sku: item.sku,
+        mintNumber: item.mintNumber,
+        weight: item.weight,
+        nfcSerialNumber: item.nfcSerialNumber,
+        orderId: item.orderId,
+        currentOwnerName: transfer.newOwnerName,
+        currentOwnerEmail: transfer.newOwnerEmail,
+        timestamp: timestamp.toISOString(), // Use exact same timestamp in hash and DB
+      };
+
+      console.log("Transfer block hash generation:", {
+        previousHash: item.currentBlockHash,
+        timestamp: {
+          raw: timestamp,
+          used: blockData.timestamp,
+        },
+        blockData,
+      });
+
       const newBlockHash = crypto
         .createHash("sha256")
-        .update(
-          JSON.stringify({
-            blockId: item.blockId,
-            serialNumber: item.serialNumber,
-            sku: item.sku,
-            mintNumber: item.mintNumber,
-            weight: item.weight,
-            nfcSerialNumber: item.nfcSerialNumber,
-            orderId: item.orderId,
-            currentOwnerName: transfer.newOwnerName,
-            currentOwnerEmail: transfer.newOwnerEmail,
-            timestamp: timestamp.toISOString(),
-          })
-        )
+        .update(JSON.stringify(blockData))
         .digest("hex");
 
-      // Update item ownership and blockchain data
+      // Update item ownership and blockchain data using the same timestamp
       await db.transaction(async (tx) => {
         // Update item
         await tx
@@ -181,7 +197,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
           .set({
             currentOwnerName: transfer.newOwnerName,
             currentOwnerEmail: transfer.newOwnerEmail,
-            modifiedAt: timestamp,
+            modifiedAt: timestamp, // Use exact same timestamp as in hash
             previousBlockHash: item.currentBlockHash,
             currentBlockHash: newBlockHash,
           })

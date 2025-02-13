@@ -205,6 +205,33 @@ export async function POST(request: Request) {
 
     const mintNumber = sku.currentMintNumber.toString().padStart(4, "0");
 
+    const timestamp = new Date();
+    const blockData = {
+      blockId,
+      serialNumber: parsed.data.serialNumber,
+      sku: parsed.data.sku,
+      mintNumber,
+      weight: parsed.data.weight,
+      nfcSerialNumber: parsed.data.nfcSerialNumber,
+      orderId: parsed.data.orderId,
+      currentOwnerName: parsed.data.originalOwnerName,
+      currentOwnerEmail: parsed.data.originalOwnerEmail,
+      purchaseDate: parsed.data.purchaseDate,
+      purchasedFrom: parsed.data.purchasedFrom,
+      manufactureDate: parsed.data.manufactureDate,
+      producedAt: parsed.data.producedAt,
+      timestamp: timestamp,
+    };
+
+    console.log("Block data:", blockData);
+    console.log(
+      "Block hash:",
+      crypto
+        .createHash("sha256")
+        .update(JSON.stringify(blockData))
+        .digest("hex")
+    );
+
     // Insert item into database
     await db.insert(items).values({
       blockId,
@@ -222,26 +249,10 @@ export async function POST(request: Request) {
       purchasedFrom: parsed.data.purchasedFrom,
       manufactureDate: new Date(parsed.data.manufactureDate),
       producedAt: parsed.data.producedAt,
+      timestamp: timestamp,
       currentBlockHash: crypto
         .createHash("sha256")
-        .update(
-          JSON.stringify({
-            blockId,
-            serialNumber: parsed.data.serialNumber,
-            sku: parsed.data.sku,
-            mintNumber,
-            weight: parsed.data.weight,
-            nfcSerialNumber: parsed.data.nfcSerialNumber,
-            orderId: parsed.data.orderId,
-            currentOwnerName: parsed.data.originalOwnerName,
-            currentOwnerEmail: parsed.data.originalOwnerEmail,
-            purchaseDate: parsed.data.purchaseDate,
-            purchasedFrom: parsed.data.purchasedFrom,
-            manufactureDate: parsed.data.manufactureDate,
-            producedAt: parsed.data.producedAt,
-            timestamp: new Date().toISOString(),
-          })
-        )
+        .update(JSON.stringify(blockData))
         .digest("hex"),
       previousBlockHash: "0".repeat(64), // Genesis block
       itemEncryptionKeyHash: itemKeyHash,
