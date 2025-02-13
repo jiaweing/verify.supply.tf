@@ -20,6 +20,7 @@ export default function ItemVerifyPage() {
   const [defaultEmail, setDefaultEmail] = useState<string>();
   const [itemId, setItemId] = useState<string>();
   const [purchaseDate, setPurchaseDate] = useState<string>();
+  const [serialNumber, setSerialNumber] = useState<string>();
 
   const key = searchParams.get("key");
   const version = searchParams.get("version");
@@ -42,6 +43,7 @@ export default function ItemVerifyPage() {
             const data = await res.json();
             setDefaultEmail(data.email);
             setItemId(data.productId);
+            setSerialNumber(data.serialNumber);
             setPurchaseDate(new Date(data.purchaseDate).toLocaleDateString());
           }
         } catch (err) {
@@ -138,14 +140,17 @@ export default function ItemVerifyPage() {
           <CardHeader>
             <CardTitle>Verify Item</CardTitle>
             <CardDescription className="space-y-2">
-              {isCodeStep
-                ? "Enter the verification code sent to your email"
-                : "Enter your email to verify ownership"}
               {purchaseDate && !isCodeStep && (
                 <p className="text-sm text-muted-foreground">
                   Purchase Date: {purchaseDate}
                 </p>
               )}
+              {serialNumber && !isCodeStep && (
+                <p className="text-sm text-muted-foreground">
+                  Serial Number: {serialNumber}
+                </p>
+              )}
+              <p className="text-sm text-muted-foreground"></p>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -183,6 +188,11 @@ export default function ItemVerifyPage() {
                     defaultValue={defaultEmail}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {isCodeStep
+                    ? "Enter the verification code sent to your email"
+                    : "Enter your email to verify ownership"}
+                </p>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Sending..." : "Send Code"}
                 </Button>

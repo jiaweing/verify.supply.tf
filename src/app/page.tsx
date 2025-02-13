@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,7 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -17,7 +26,7 @@ import * as z from "zod";
 
 const verifySchema = z.object({
   email: z.string().email("Invalid email address"),
-  code: z.string().length(6, "Code must be exactly 6 digits"),
+  code: z.string().optional(),
   serialNumber: z
     .string()
     .min(1, "Serial number is required")
@@ -79,6 +88,7 @@ export default function VerifyPage() {
 
   async function onSubmit(values: FormData) {
     try {
+      console.log("Form submitted with values:", values);
       if (step === "verify") {
         // Request verification code
         const res = await fetch("/api/auth/request-code", {
@@ -107,6 +117,15 @@ export default function VerifyPage() {
 
         setStep("code");
       } else {
+        if (!values.code || values.code.length !== 6) {
+          toast({
+            title: "Error",
+            description: "Please enter a valid 6-digit code",
+            variant: "destructive",
+          });
+          return;
+        }
+
         // Verify code and get session
         const res = await fetch("/api/auth/verify-code", {
           method: "POST",
@@ -151,19 +170,106 @@ export default function VerifyPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {step === "verify" ? (
-                <div className="flex items-center justify-center py-8">
-                  <p className="text-sm text-gray-500">Verifying link...</p>
+          <div className="space-y-4">
+            {isNfcLink ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">Verifying link...</p>
+              </div>
+            ) : (
+              <Form {...form}>
+                <div className="space-y-4">
+                  {step === "verify" ? (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="serialNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Serial Number</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter serial number"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="email"
+                                placeholder="Enter your email"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="purchaseDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Purchase Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={form.handleSubmit(onSubmit)}
+                      >
+                        Verify
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Verification Code</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter 6-digit code"
+                                maxLength={6}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={form.handleSubmit(onSubmit)}
+                      >
+                        Submit Code
+                      </Button>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <p className="text-sm text-gray-500">Please wait...</p>
-                </div>
-              )}
-            </form>
-          </Form>
+              </Form>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

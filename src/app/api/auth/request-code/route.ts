@@ -1,28 +1,48 @@
 import { db } from "@/db";
 import { authCodes, items } from "@/db/schema";
 import { generateAuthCode } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
 const requestCodeSchema = z.object({
   email: z.string().email(),
+  serialNumber: z.string().min(1),
+  purchaseDate: z.string().min(1),
+  key: z.string().optional(),
+  version: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
   try {
     // Parse and validate request
     const body = await req.json();
-    const { email } = requestCodeSchema.parse(body);
+    const { email, serialNumber, purchaseDate, key, version } =
+      requestCodeSchema.parse(body);
 
-    // Check if item exists with this email
+    // Create base conditions
+    const conditions = [
+      eq(items.currentOwnerEmail, email),
+      eq(items.serialNumber, serialNumber),
+      eq(items.purchaseDate, new Date(purchaseDate)),
+    ];
+
+    // Add optional key and version conditions if provided
+    if (key && version) {
+      conditions.push(
+        eq(items.itemEncryptionKeyHash, key),
+        eq(items.globalKeyVersion, version)
+      );
+    }
+
+    // Check if item exists with all conditions
     const item = await db.query.items.findFirst({
-      where: eq(items.currentOwnerEmail, email),
+      where: and(...conditions),
     });
 
     if (!item) {
       return Response.json(
-        { error: "No item found with this email" },
+        { error: "No item found matching these details" },
         { status: 404 }
       );
     }
