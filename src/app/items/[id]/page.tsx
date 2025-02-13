@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { EndSessionButton } from "@/components/end-session-button";
 import {
   Card,
   CardContent,
@@ -11,12 +11,10 @@ import { validateSession } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-export default async function ItemVerificationPage(
-  props: {
-    params: Promise<{ id: string }>;
-    searchParams: Promise<{ key?: string; version?: string }>;
-  }
-) {
+export default async function ItemVerificationPage(props: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ key?: string; version?: string }>;
+}) {
   const searchParams = await props.searchParams;
   const params = await props.params;
   // Check for active session
@@ -165,17 +163,7 @@ export default async function ItemVerificationPage(
       )}
 
       <div className="flex justify-center">
-        <Button
-          variant="outline"
-          onClick={() => {
-            // Clear session and refresh page
-            document.cookie =
-              "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            window.location.reload();
-          }}
-        >
-          End Session
-        </Button>
+        <EndSessionButton />
       </div>
     </div>
   );

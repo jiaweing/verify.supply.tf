@@ -23,8 +23,8 @@ export async function generateAuthCode(): Promise<string> {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export function generateSessionToken(): string {
-  return jwt.sign({}, env.SESSION_SECRET, {
+export function generateSessionToken(itemId: number): string {
+  return jwt.sign({ itemId }, env.SESSION_SECRET, {
     expiresIn: `${env.SESSION_EXPIRY_MINUTES}m`,
   });
 }
@@ -42,35 +42,69 @@ export async function createSession(itemId: number): Promise<{
   sessionToken: string;
   expiresAt: Date;
 }> {
-  const sessionToken = generateSessionToken();
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + env.SESSION_EXPIRY_MINUTES);
+  try {
+    const sessionToken = generateSessionToken(itemId);
+    const expiresAt = new Date(
+      Date.now() + env.SESSION_EXPIRY_MINUTES * 60 * 1000
+    );
 
-  await db.insert(sessions).values({
-    itemId,
-    sessionToken,
-    expiresAt,
-  });
+    const result = await db.insert(sessions).values({
+      itemId,
+      sessionToken,
+      expiresAt,
+    });
+    console.log("Session created:", { itemId, sessionToken, expiresAt });
+    console.log("Result:", result);
 
-  return { sessionToken, expiresAt };
+    return { sessionToken, expiresAt };
+  } catch (error) {
+    console.error("Failed to create session:", error);
+    throw error;
+  }
 }
 
 export async function validateSession(
   sessionToken: string
 ): Promise<number | null> {
-  const now = sql`NOW()`;
+  try {
+    // First verify the JWT token
+    const decoded = jwt.verify(
+      sessionToken,
+      env.SESSION_SECRET
+    ) as SessionJwtPayload;
+    const itemId = decoded.itemId;
+    console.log(itemId);
 
-  // Find valid session and clean up expired ones
-  await db.delete(sessions).where(sql`${sessions.expiresAt} < ${now}`);
+    // find and log
+    const sessionfind = await db.query.sessions.findFirst({
+      where: eq(sessions.sessionToken, sessionToken),
+    });
+    console.log("Session validated:", sessionfind);
 
-  const session = await db.query.sessions.findFirst({
-    where: and(
-      eq(sessions.sessionToken, sessionToken),
-      sql`${sessions.expiresAt} > ${now}`
-    ),
-  });
+    // Then verify it exists in database and cleanup expired sessions
+    const now = sql`TIMEZONE('utc', CURRENT_TIMESTAMP)`;
+    console.log("Current UTC time:", new Date().toISOString());
+    console.log("Session expiry:", sessionfind?.expiresAt);
 
-  return session?.itemId ?? null;
+    const deleted = await db
+      .delete(sessions)
+      .where(sql`${sessions.expiresAt} < ${now}`);
+    console.log("Deleted expired sessions:", deleted);
+
+    const session = await db.query.sessions.findFirst({
+      where: and(
+        eq(sessions.sessionToken, sessionToken),
+        eq(sessions.itemId, itemId),
+        sql`${sessions.expiresAt} > ${now}`
+      ),
+    });
+    console.log("Session validated:", session);
+
+    return session?.itemId ?? null;
+  } catch (error) {
+    console.error("Session validation failed:", error);
+    return null;
+  }
 }
 
 export async function deleteSession(sessionToken: string): Promise<void> {
@@ -88,7 +122,12 @@ interface AdminJwtPayload {
   exp: number;
 }
 
-// Admin authentication
+interface SessionJwtPayload {
+  itemId: number;
+  iat: number;
+  exp: number;
+}
+
 // Admin authentication
 export async function initializeAdmin(): Promise<void> {
   // Check if admin exists
