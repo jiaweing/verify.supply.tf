@@ -11,13 +11,14 @@ import { validateSession } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-export default async function ItemVerificationPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { key?: string; version?: string };
-}) {
+export default async function ItemVerificationPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ key?: string; version?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   // Check for active session
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get("session_token")?.value;

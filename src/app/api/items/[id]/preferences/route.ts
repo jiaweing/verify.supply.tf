@@ -9,10 +9,8 @@ const updatePreferencesSchema = z.object({
   showOwnershipHistory: z.boolean(),
 });
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Validate authentication
     const sessionToken = req.headers.get("authorization")?.split(" ")[1];

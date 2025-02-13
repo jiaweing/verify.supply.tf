@@ -4,10 +4,8 @@ import { validateSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Validate authentication
     const sessionToken = req.headers.get("authorization")?.split(" ")[1];

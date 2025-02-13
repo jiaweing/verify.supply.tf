@@ -19,7 +19,8 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-export default async function ItemPage({ params }: { params: { id: string } }) {
+export default async function ItemPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const isAuthenticated = await auth();
   if (!isAuthenticated) {
     redirect("/admin/login");

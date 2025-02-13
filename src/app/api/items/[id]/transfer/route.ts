@@ -11,10 +11,8 @@ const TRANSFER_EXPIRY_HOURS = env.OWNERSHIP_TRANSFER_EXPIRY_HOURS
   ? env.OWNERSHIP_TRANSFER_EXPIRY_HOURS
   : 24;
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Validate session
     const sessionToken = request.headers.get("authorization")?.split(" ")[1];
@@ -104,10 +102,8 @@ export async function POST(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { transferId, action } = await request.json();
 
