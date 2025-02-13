@@ -78,8 +78,8 @@ export default function ItemVerifyPage() {
         <CardContent>
           <VerifyForm
             defaultValues={defaultValues}
-            key={key}
-            version={version}
+            key={key || undefined}
+            version={version || undefined}
             itemId={itemId}
           />
         </CardContent>

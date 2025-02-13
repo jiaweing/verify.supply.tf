@@ -31,7 +31,7 @@ type FormData = z.infer<typeof verifySchema>;
 
 interface VerifyFormProps {
   defaultValues?: Partial<FormData>;
-  key?: string | null;
+  encryptionKey?: string | null;
   version?: string | null;
   itemId?: string;
   onSuccess?: (data: { itemId: string; sessionToken: string }) => void;
@@ -39,11 +39,13 @@ interface VerifyFormProps {
 
 export function VerifyForm({
   defaultValues,
-  key,
+  encryptionKey,
   version,
   itemId,
   onSuccess,
 }: VerifyFormProps) {
+  const effectiveKey = encryptionKey || undefined;
+  const effectiveVersion = version || undefined;
   const router = useRouter();
   const { toast } = useToast();
 
@@ -71,8 +73,8 @@ export function VerifyForm({
             email: values.email,
             serialNumber: values.serialNumber,
             purchaseDate: values.purchaseDate,
-            key,
-            version,
+            key: effectiveKey,
+            version: effectiveVersion,
             itemId,
           }),
         });
@@ -109,8 +111,8 @@ export function VerifyForm({
             code: values.code,
             serialNumber: values.serialNumber,
             purchaseDate: values.purchaseDate,
-            key,
-            version,
+            key: effectiveKey,
+            version: effectiveVersion,
             itemId,
           }),
         });
