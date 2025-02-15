@@ -3,8 +3,14 @@ import { items } from "@/db/schema";
 import { validateSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+const uuidSchema = z.string().uuid("Invalid UUID format");
+
+export async function GET(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     // Validate authentication
@@ -24,9 +30,17 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
       );
     }
 
+    // Validate UUID format
+    const parsed = uuidSchema.safeParse(params.id);
+    if (!parsed.success) {
+      return Response.json(
+        { error: "Invalid item ID format" },
+        { status: 400 }
+      );
+    }
+
     // Verify item access
-    const itemid = parseInt(params.id);
-    if (authenticatedItemId !== itemid) {
+    if (authenticatedItemId !== params.id) {
       return Response.json(
         { error: "Unauthorized to access this item" },
         { status: 403 }
@@ -35,7 +49,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
     // Fetch item with ownership history
     const item = await db.query.items.findFirst({
-      where: eq(items.id, itemid),
+      where: eq(items.id, params.id),
       with: {
         ownershipHistory: {
           orderBy: (history, { desc }) => [desc(history.transferDate)],
@@ -49,7 +63,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
     // Check user preferences for ownership history visibility
     const userPreferences = await db.query.userPreferences.findFirst({
-      where: eq(items.id, itemid),
+      where: eq(items.id, params.id),
     });
 
     const showHistory = userPreferences?.showOwnershipHistory ?? true;

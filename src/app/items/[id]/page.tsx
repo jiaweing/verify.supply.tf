@@ -25,6 +25,7 @@ export default async function ItemVerificationPage(props: {
 
   if (sessionToken) {
     const itemId = await validateSession(sessionToken);
+    console.log(itemId);
     if (itemId) {
       isAuthenticated = true;
       item = await db.query.items.findFirst({
@@ -57,42 +58,60 @@ export default async function ItemVerificationPage(props: {
   const showHistory = item.userPreferences?.[0]?.showOwnershipHistory ?? true;
 
   return (
-    <div className="container max-w-4xl py-10 space-y-6">
-      <Card>
+    <div className="container max-w-4xl py-10 mx-auto space-y-6">
+      <Card className="text-center">
         <CardHeader>
-          <CardTitle>Item Verification</CardTitle>
-          <CardDescription>
-            This item has been verified as authentic
+          <div className="flex justify-center mb-4">
+            <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+              <svg
+                className="w-16 h-16 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+          </div>
+          <CardTitle className="text-2xl">Verified</CardTitle>
+          <CardDescription className="text-lg">
+            This item is original & authentic.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-2 gap-4">
+          <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
-              <dt className="font-medium">Serial Number</dt>
+              <dt className="font-medium mb-1">Serial Number</dt>
               <dd className="text-gray-500">{item.serialNumber}</dd>
             </div>
             <div>
-              <dt className="font-medium">SKU</dt>
+              <dt className="font-medium mb-1">SKU</dt>
               <dd className="text-gray-500">{item.sku}</dd>
             </div>
             <div>
-              <dt className="font-medium">Mint Number</dt>
+              <dt className="font-medium mb-1">Mint Number</dt>
               <dd className="text-gray-500">#{item.mintNumber}</dd>
             </div>
             <div>
-              <dt className="font-medium">Weight</dt>
+              <dt className="font-medium mb-1">Weight</dt>
               <dd className="text-gray-500">{item.weight}</dd>
             </div>
           </dl>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="text-center">
         <CardHeader>
           <CardTitle>Current Owner</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-2 gap-4">
+          <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
               <dt className="font-medium">Name</dt>
               <dd className="text-gray-500">{item.currentOwnerName}</dd>
@@ -107,12 +126,12 @@ export default async function ItemVerificationPage(props: {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="text-center">
         <CardHeader>
           <CardTitle>Origin Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-2 gap-4">
+          <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
               <dt className="font-medium">Manufacture Date</dt>
               <dd className="text-gray-500">
@@ -128,28 +147,30 @@ export default async function ItemVerificationPage(props: {
       </Card>
 
       {showHistory && (
-        <Card>
+        <Card className="text-center">
           <CardHeader>
             <CardTitle>Ownership History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-xl mx-auto">
               {(item.ownershipHistory ?? []).map((history, index) => (
                 <div
                   key={history.id}
-                  className="flex items-center justify-between border-b last:border-0 pb-4 last:pb-0"
+                  className="grid grid-cols-2 gap-4 items-center border-b last:border-0 pb-4 last:pb-0"
                 >
-                  <div>
+                  <div className="text-center">
                     <div className="font-medium">{history.ownerName}</div>
                     <div className="text-sm text-gray-500">
                       {history.transferDate.toLocaleDateString()}
                     </div>
                   </div>
-                  {index === 0 && (
-                    <div className="text-sm font-medium text-green-600">
-                      Current Owner
-                    </div>
-                  )}
+                  <div className="text-center">
+                    {index === 0 && (
+                      <div className="text-sm font-medium text-green-600">
+                        Current Owner
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
               {(item.ownershipHistory ?? []).length === 0 && (

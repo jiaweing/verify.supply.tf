@@ -67,8 +67,8 @@ export default function ItemVerifyPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-[400px]">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-100">
+      <Card className="w-[400px] shadow-lg">
         <CardHeader>
           <CardTitle>Verify Item</CardTitle>
           <CardDescription>

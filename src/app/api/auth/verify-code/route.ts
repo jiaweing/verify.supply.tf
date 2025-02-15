@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     // Delete used auth code
     await db.delete(authCodes).where(eq(authCodes.email, email));
 
-    return Response.json({
+    // Create response with session token cookie
+    const response = Response.json({
       sessionToken,
       expiresAt: expiresAt.toISOString(),
       item: {
@@ -55,6 +56,14 @@ export async function POST(req: NextRequest) {
         nfcSerialNumber: item.nfcSerialNumber,
       },
     });
+
+    // Set session cookie that expires at the same time as the session
+    response.headers.set(
+      "Set-Cookie",
+      `session_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Expires=${expiresAt.toUTCString()}`
+    );
+
+    return response;
   } catch (error) {
     console.error("Error in /api/auth/verify-code:", error);
     if (error instanceof Error) {

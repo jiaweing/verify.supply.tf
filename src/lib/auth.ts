@@ -23,7 +23,7 @@ export async function generateAuthCode(): Promise<string> {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export function generateSessionToken(itemId: number): string {
+export function generateSessionToken(itemId: string): string {
   return jwt.sign({ itemId }, env.SESSION_SECRET, {
     expiresIn: `${env.SESSION_EXPIRY_MINUTES}m`,
   });
@@ -38,7 +38,7 @@ export function verifyPassword(password: string, hash: string): boolean {
 }
 
 // Session management
-export async function createSession(itemId: number): Promise<{
+export async function createSession(itemId: string): Promise<{
   sessionToken: string;
   expiresAt: Date;
 }> {
@@ -65,7 +65,7 @@ export async function createSession(itemId: number): Promise<{
 
 export async function validateSession(
   sessionToken: string
-): Promise<number | null> {
+): Promise<string | null> {
   try {
     // First verify the JWT token
     const decoded = jwt.verify(
@@ -81,26 +81,26 @@ export async function validateSession(
     });
     console.log("Session validated:", sessionfind);
 
-    // Then verify it exists in database and cleanup expired sessions
-    const now = sql`TIMEZONE('utc', CURRENT_TIMESTAMP)`;
-    console.log("Current UTC time:", new Date().toISOString());
-    console.log("Session expiry:", sessionfind?.expiresAt);
-
-    const deleted = await db
-      .delete(sessions)
-      .where(sql`${sessions.expiresAt} < ${now}`);
-    console.log("Deleted expired sessions:", deleted);
-
+    // First check if the session exists
     const session = await db.query.sessions.findFirst({
       where: and(
         eq(sessions.sessionToken, sessionToken),
-        eq(sessions.itemId, itemId),
-        sql`${sessions.expiresAt} > ${now}`
+        eq(sessions.itemId, itemId)
       ),
     });
     console.log("Session validated:", session);
 
-    return session?.itemId ?? null;
+    // Check if session is expired
+    const now = new Date();
+    if (!session || session.expiresAt < now) {
+      // Clean up expired sessions
+      await db
+        .delete(sessions)
+        .where(sql`${sessions.expiresAt} < ${sql`NOW()`}`);
+      return null;
+    }
+
+    return session.itemId;
   } catch (error) {
     console.error("Session validation failed:", error);
     return null;
@@ -123,7 +123,7 @@ interface AdminJwtPayload {
 }
 
 interface SessionJwtPayload {
-  itemId: number;
+  itemId: string;
   iat: number;
   exp: number;
 }

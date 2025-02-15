@@ -110,7 +110,7 @@ export async function GET(request: Request) {
 }
 
 // Verify blockchain integrity by checking the chain of block hashes
-async function verifyBlockchain(productId: number) {
+async function verifyBlockchain(productId: string) {
   // Get item and its ownership history
   const item = await db.query.items.findFirst({
     where: eq(items.id, productId),
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
     }
 
     const item = await db.query.items.findFirst({
-      where: (items, { eq }) => eq(items.id, parseInt(productId)),
+      where: (items, { eq }) => eq(items.id, productId),
     });
 
     if (!item) {
@@ -311,7 +311,7 @@ export async function POST(request: Request) {
     }
 
     // Verify blockchain integrity
-    const { isValid, error } = await verifyBlockchain(parseInt(productId));
+    const { isValid, error } = await verifyBlockchain(productId);
     if (!isValid) {
       return Response.json(
         { error: `Blockchain verification failed: ${error}` },
@@ -320,9 +320,7 @@ export async function POST(request: Request) {
     }
 
     // Create session
-    const { sessionToken, expiresAt } = await createSession(
-      parseInt(productId)
-    );
+    const { sessionToken, expiresAt } = await createSession(productId);
 
     // Set session cookie
     const cookieStore = await cookies();

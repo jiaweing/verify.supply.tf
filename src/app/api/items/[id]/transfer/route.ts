@@ -27,7 +27,7 @@ export async function POST(
     }
 
     const itemId = await validateSession(sessionToken);
-    if (!itemId || itemId !== parseInt(params.id)) {
+    if (!itemId || itemId !== params.id) {
       return Response.json(
         { error: "Invalid or expired session" },
         { status: 401 }
@@ -129,7 +129,7 @@ export async function PUT(
       );
     }
 
-    if (transfer.itemId !== parseInt(params.id)) {
+    if (transfer.itemId !== params.id) {
       return Response.json(
         { error: "Transfer request does not match item" },
         { status: 400 }

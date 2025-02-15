@@ -52,19 +52,35 @@ export function VerifyForm({
   const form = useForm<FormData>({
     resolver: zodResolver(verifySchema),
     defaultValues: {
-      email: "",
-      code: "",
-      serialNumber: "",
-      purchaseDate: new Date().toISOString().split("T")[0],
-      ...defaultValues,
+      email: defaultValues?.email || "",
+      serialNumber: defaultValues?.serialNumber || "",
+      purchaseDate:
+        defaultValues?.purchaseDate || new Date().toISOString().split("T")[0],
+      code: "", // Always initialize code as empty
     },
   });
 
   const [step, setStep] = React.useState<"verify" | "code">("verify");
 
+  // Reset code field when switching steps
+  React.useEffect(() => {
+    if (step === "code") {
+      form.setValue("code", "");
+    }
+  }, [step, form]);
+
+  const [verifiedData, setVerifiedData] = React.useState<Partial<FormData>>({});
+
   async function onSubmit(values: FormData) {
     try {
       if (step === "verify") {
+        // Store the verified data before requesting code
+        setVerifiedData({
+          email: values.email,
+          serialNumber: values.serialNumber,
+          purchaseDate: values.purchaseDate,
+        });
+
         // Request verification code
         const res = await fetch("/api/auth/request-code", {
           method: "POST",
@@ -107,13 +123,8 @@ export function VerifyForm({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: values.email,
+            email: verifiedData.email!,
             code: values.code,
-            serialNumber: values.serialNumber,
-            purchaseDate: values.purchaseDate,
-            key: effectiveKey,
-            version: effectiveVersion,
-            itemId,
           }),
         });
 
@@ -126,7 +137,8 @@ export function VerifyForm({
         if (onSuccess) {
           onSuccess(data);
         } else {
-          router.push(`/items/${data.itemId}?session=${data.sessionToken}`);
+          const itemPath = itemId || data.item.id;
+          router.push(`/items/${itemPath}`);
         }
       }
     } catch (error) {

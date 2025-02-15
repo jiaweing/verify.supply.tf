@@ -6,6 +6,7 @@ import {
   serial,
   text,
   timestamp,
+  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -29,7 +30,7 @@ export const skus = pgTable("skus", {
 
 // Items table (renamed from items)
 export const items = pgTable("items", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   blockId: varchar("block_id", { length: 64 }).unique().notNull(),
   serialNumber: varchar("serial_number", { length: 64 }).unique().notNull(),
   sku: varchar("sku", { length: 64 })
@@ -65,7 +66,7 @@ export const items = pgTable("items", {
 
 export const ownershipHistory = pgTable("ownership_history", {
   id: serial("id").primaryKey(),
-  itemId: integer("item_id")
+  itemId: uuid("item_id")
     .references(() => items.id)
     .notNull(),
   ownerName: varchar("owner_name", { length: 255 }).notNull(),
@@ -75,7 +76,7 @@ export const ownershipHistory = pgTable("ownership_history", {
 
 export const ownershipTransfers = pgTable("ownership_transfers", {
   id: serial("id").primaryKey(),
-  itemId: integer("item_id")
+  itemId: uuid("item_id")
     .references(() => items.id)
     .notNull(),
   currentOwnerEmail: varchar("current_owner_email", { length: 255 }).notNull(),
@@ -88,7 +89,7 @@ export const ownershipTransfers = pgTable("ownership_transfers", {
 
 export const userPreferences = pgTable("user_preferences", {
   id: serial("id").primaryKey(),
-  itemId: integer("item_id")
+  itemId: uuid("item_id")
     .references(() => items.id)
     .notNull(),
   showOwnershipHistory: boolean("show_ownership_history")
@@ -106,7 +107,7 @@ export const globalEncryptionKeys = pgTable("global_encryption_keys", {
 
 export const sessions = pgTable("sessions", {
   id: serial("id").primaryKey(),
-  itemId: integer("item_id")
+  itemId: uuid("item_id")
     .references(() => items.id)
     .notNull(),
   sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),

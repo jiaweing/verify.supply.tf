@@ -5,11 +5,15 @@ import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
+const uuidSchema = z.string().uuid("Invalid UUID format");
 const updatePreferencesSchema = z.object({
   showOwnershipHistory: z.boolean(),
 });
 
-export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     // Validate authentication
@@ -29,9 +33,9 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       );
     }
 
-    // Verify item access
-    const itemid = parseInt(params.id);
-    if (authenticatedItemId !== itemid) {
+    // Validate UUID format
+    const validatedId = uuidSchema.parse(params.id);
+    if (authenticatedItemId !== validatedId) {
       return Response.json(
         { error: "Unauthorized to update this item's preferences" },
         { status: 403 }
@@ -44,7 +48,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 
     // Check if item exists
     const item = await db.query.items.findFirst({
-      where: eq(items.id, itemid),
+      where: eq(items.id, validatedId),
     });
 
     if (!item) {
@@ -53,17 +57,17 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 
     // Update or create preferences
     const existingPreferences = await db.query.userPreferences.findFirst({
-      where: eq(userPreferences.itemid, itemid),
+      where: eq(userPreferences.itemId, validatedId),
     });
 
     if (existingPreferences) {
       await db
         .update(userPreferences)
         .set({ showOwnershipHistory })
-        .where(eq(userPreferences.itemid, itemid));
+        .where(eq(userPreferences.itemId, validatedId));
     } else {
       await db.insert(userPreferences).values({
-        itemid,
+        itemId: validatedId,
         showOwnershipHistory,
       });
     }

@@ -1,5 +1,5 @@
 {
-  "id": "381faaf0-be69-4166-aa10-0bbb2eb496ef",
+  "id": "916f9cfa-890a-4adf-b596-f0ce42d50a96",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -158,9 +158,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "block_id": {
           "name": "block_id",
@@ -374,7 +375,7 @@
         },
         "item_id": {
           "name": "item_id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -432,7 +433,7 @@
         },
         "item_id": {
           "name": "item_id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -509,7 +510,7 @@
         },
         "item_id": {
           "name": "item_id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -629,7 +630,7 @@
         },
         "item_id": {
           "name": "item_id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },

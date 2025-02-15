@@ -25,7 +25,7 @@ CREATE TABLE "global_encryption_keys" (
 );
 --> statement-breakpoint
 CREATE TABLE "items" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"block_id" varchar(64) NOT NULL,
 	"serial_number" varchar(64) NOT NULL,
 	"sku" varchar(64) NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE "items" (
 --> statement-breakpoint
 CREATE TABLE "ownership_history" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"item_id" integer NOT NULL,
+	"item_id" uuid NOT NULL,
 	"owner_name" varchar(255) NOT NULL,
 	"owner_email" varchar(255) NOT NULL,
 	"transfer_date" timestamp DEFAULT now() NOT NULL
@@ -66,7 +66,7 @@ CREATE TABLE "ownership_history" (
 --> statement-breakpoint
 CREATE TABLE "ownership_transfers" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"item_id" integer NOT NULL,
+	"item_id" uuid NOT NULL,
 	"current_owner_email" varchar(255) NOT NULL,
 	"new_owner_email" varchar(255) NOT NULL,
 	"new_owner_name" varchar(255) NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE "ownership_transfers" (
 --> statement-breakpoint
 CREATE TABLE "sessions" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"item_id" integer NOT NULL,
+	"item_id" uuid NOT NULL,
 	"session_token" varchar(255) NOT NULL,
 	"expires_at" timestamp NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -95,7 +95,7 @@ CREATE TABLE "skus" (
 --> statement-breakpoint
 CREATE TABLE "user_preferences" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"item_id" integer NOT NULL,
+	"item_id" uuid NOT NULL,
 	"show_ownership_history" boolean DEFAULT true NOT NULL
 );
 --> statement-breakpoint

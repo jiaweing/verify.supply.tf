@@ -18,6 +18,9 @@ import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
+
+const uuidSchema = z.string().uuid("Invalid UUID format");
 
 export default async function ItemPage(props: {
   params: Promise<{ id: string }>;
@@ -28,8 +31,10 @@ export default async function ItemPage(props: {
     redirect("/admin/login");
   }
 
-  const id = parseInt(params.id);
-  if (isNaN(id)) {
+  let id: string;
+  try {
+    id = uuidSchema.parse(params.id);
+  } catch {
     notFound();
   }
 
