@@ -10,6 +10,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -43,10 +50,10 @@ export function CreateItemForm() {
       orderId: "",
       originalOwnerName: "",
       originalOwnerEmail: "",
-      purchaseDate: "",
-      purchasedFrom: "",
-      manufactureDate: "",
-      producedAt: "",
+      purchaseDate: "2025-02-16",
+      purchasedFrom: "WEBSITE",
+      manufactureDate: "2025-02-16",
+      producedAt: "SINGAPORE",
     },
   });
 
@@ -203,7 +210,19 @@ export function CreateItemForm() {
               <FormItem>
                 <FormLabel>Purchased From</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter vendor name" {...field} />
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WEBSITE">WEBSITE</SelectItem>
+                      <SelectItem value="SHOPEE">SHOPEE</SelectItem>
+                      <SelectItem value="DIRECT">DIRECT</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage />
               </FormItem>
