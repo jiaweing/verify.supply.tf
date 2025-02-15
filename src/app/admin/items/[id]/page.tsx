@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -56,7 +57,9 @@ export default async function ItemPage(props: {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Item Details</h1>
         <Button asChild variant="outline">
-          <Link href="/admin">Back to Items</Link>
+          <Link href="/admin">
+            Items <ChevronRight />
+          </Link>
         </Button>
       </div>
 

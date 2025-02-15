@@ -20,6 +20,7 @@ export default function ItemVerifyPage() {
   }>();
   const [isLoading, setIsLoading] = useState(true);
   const [itemId, setItemId] = useState<string>();
+  const [verifyStep, setVerifyStep] = useState<"verify" | "code">("verify");
 
   const key = searchParams.get("key");
   const version = searchParams.get("version");
@@ -67,20 +68,25 @@ export default function ItemVerifyPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-100">
-      <Card className="w-[400px] shadow-lg">
+    <div className="flex items-center justify-center bg-gray-100 min-h-screen">
+      <Card className="w-[400px]">
         <CardHeader>
-          <CardTitle>Verify Item</CardTitle>
+          <CardTitle>
+            {verifyStep === "verify" ? "Verify Item" : "Check Your Email"}
+          </CardTitle>
           <CardDescription>
-            Complete verification to view item details.
+            {verifyStep === "verify"
+              ? "Complete verification to view item details"
+              : "Enter the 6-digit code we sent to your email"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <VerifyForm
             defaultValues={defaultValues}
-            key={key || undefined}
+            encryptionKey={key || undefined}
             version={version || undefined}
             itemId={itemId}
+            onStepChange={setVerifyStep}
           />
         </CardContent>
       </Card>

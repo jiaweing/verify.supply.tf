@@ -1,5 +1,6 @@
 "use client";
 
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 
@@ -14,8 +15,8 @@ export function EndSessionButton() {
   };
 
   return (
-    <Button variant="outline" onClick={handleEndSession}>
-      End Session
+    <Button variant="destructive" onClick={handleEndSession}>
+      <LogOut /> End Session
     </Button>
   );
 }

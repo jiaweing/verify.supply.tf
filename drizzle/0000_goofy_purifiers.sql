@@ -51,7 +51,6 @@ CREATE TABLE "items" (
 	"nfc_link" varchar(255) NOT NULL,
 	CONSTRAINT "items_block_id_unique" UNIQUE("block_id"),
 	CONSTRAINT "items_serial_number_unique" UNIQUE("serial_number"),
-	CONSTRAINT "items_mint_number_unique" UNIQUE("mint_number"),
 	CONSTRAINT "items_nfc_serial_number_unique" UNIQUE("nfc_serial_number"),
 	CONSTRAINT "items_nfc_link_unique" UNIQUE("nfc_link")
 );

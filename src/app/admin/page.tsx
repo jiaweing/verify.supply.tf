@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -28,7 +29,9 @@ export default async function AdminPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Items</h1>
         <Button asChild>
-          <Link href="/admin/items/new">Add Item</Link>
+          <Link href="/admin/items/new">
+            <Plus /> New
+          </Link>
         </Button>
       </div>
 
@@ -52,13 +55,15 @@ export default async function AdminPage() {
                 <TableCell>#{item.mintNumber}</TableCell>
                 <TableCell>{item.currentOwnerName}</TableCell>
                 <TableCell className="font-mono text-sm">
-                  <Link href={item.nfcLink} className="text-sky-600">
+                  <Link href={item.nfcLink} className="text-primary">
                     {item.nfcLink}
                   </Link>
                 </TableCell>
                 <TableCell>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/items/${item.id}`}>View</Link>
+                    <Link href={`/admin/items/${item.id}`}>
+                      View <ChevronRight />
+                    </Link>
                   </Button>
                 </TableCell>
               </TableRow>

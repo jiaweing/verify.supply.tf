@@ -1,5 +1,4 @@
-"use client";
-
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,97 +7,58 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { VerifyForm } from "@/components/verify-form";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { Loader2, X } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import * as React from "react";
+import { validateSession } from "@/lib/auth";
+import { ChevronRight, Clock } from "lucide-react";
+import { cookies } from "next/headers";
+import Link from "next/link";
 
-export default function VerifyPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { toast } = useToast();
-  const [isInvalid, setIsInvalid] = React.useState(false);
+export default async function HomePage() {
+  // Check for active session
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get("session_token")?.value;
+  let itemId = null;
 
-  const key = searchParams.get("key");
-  const version = searchParams.get("version");
-
-  React.useEffect(() => {
-    async function verifyAndRedirect() {
-      if (key && version) {
-        try {
-          const res = await fetch(
-            `/api/items/verify?key=${key}&version=${version}`
-          );
-          const data = await res.json();
-
-          if (res.ok) {
-            router.push(
-              `/items/${data.productId}/verify?key=${key}&version=${version}`
-            );
-          } else {
-            setIsInvalid(true);
-            toast({
-              title: "Error",
-              description: "This link is invalid",
-              variant: "destructive",
-            });
-          }
-        } catch (err) {
-          console.error("Error verifying link:", err);
-          setIsInvalid(true);
-          toast({
-            title: "Error",
-            description: "This link is invalid",
-            variant: "destructive",
-          });
-        }
-      }
-    }
-
-    verifyAndRedirect();
-  }, [key, version, router, toast]);
-
-  const isNfcLink = key && version;
+  if (sessionToken) {
+    itemId = await validateSession(sessionToken);
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-[400px]">
-        {!isNfcLink && (
+      <div className="space-y-4">
+        <Card className="w-[400px]">
           <CardHeader>
             <CardTitle>Verify Item</CardTitle>
             <CardDescription>
-              {isNfcLink
-                ? "Complete verification to view item details."
-                : "Enter your item details to verify authenticity."}
+              Enter your item details to verify authenticity.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <VerifyForm />
+          </CardContent>
+        </Card>
+
+        {itemId && (
+          <Card className="w-[400px]">
+            <CardHeader>
+              <CardTitle className="text-xl flex flex-row items-center space-x-2">
+                <Clock className="h-5 w-5 text-muted-foreground" />{" "}
+                <div>Recently Viewed</div>
+              </CardTitle>
+              <CardDescription>
+                You are still logged in. Continue viewing your previously
+                verified item.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href={`/items/${itemId}`}>
+                <Button className="w-full" variant="secondary">
+                  Continue <ChevronRight />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         )}
-        <CardContent
-          className={cn(
-            isNfcLink &&
-              "p-6 text-center text-muted-foreground flex items-center justify-center space-x-2"
-          )}
-        >
-          {isNfcLink ? (
-            <div className="flex items-center justify-center space-x-2">
-              {isInvalid ? (
-                <>
-                  <X className="w-4 h-4 text-red-500" />
-                  <p>This link is invalid</p>
-                </>
-              ) : (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <p>Verifying...</p>
-                </>
-              )}
-            </div>
-          ) : (
-            <VerifyForm encryptionKey={key} version={version} />
-          )}
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

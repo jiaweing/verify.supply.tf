@@ -11,6 +11,7 @@ const requestCodeSchema = z.object({
   purchaseDate: z.string().min(1),
   key: z.string().optional(),
   version: z.string().optional(),
+  itemId: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,6 +21,12 @@ export async function POST(req: NextRequest) {
     const { email, serialNumber, purchaseDate, key, version } =
       requestCodeSchema.parse(body);
 
+    console.log("email: ", email);
+    console.log("serialNumber: ", serialNumber);
+    console.log("purchaseDate: ", purchaseDate);
+    console.log("key: ", key);
+    console.log("version: ", version);
+
     // Create base conditions
     const conditions = [
       eq(items.currentOwnerEmail, email),
@@ -27,12 +34,8 @@ export async function POST(req: NextRequest) {
       eq(items.purchaseDate, new Date(purchaseDate)),
     ];
 
-    // Add optional key and version conditions if provided
-    if (key && version) {
-      conditions.push(
-        eq(items.itemEncryptionKeyHash, key),
-        eq(items.globalKeyVersion, version)
-      );
+    if (version) {
+      conditions.push(eq(items.globalKeyVersion, version));
     }
 
     // Check if item exists with all conditions

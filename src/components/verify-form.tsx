@@ -10,6 +10,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -35,6 +41,7 @@ interface VerifyFormProps {
   version?: string | null;
   itemId?: string;
   onSuccess?: (data: { itemId: string; sessionToken: string }) => void;
+  onStepChange?: (step: "verify" | "code") => void;
 }
 
 export function VerifyForm({
@@ -43,6 +50,7 @@ export function VerifyForm({
   version,
   itemId,
   onSuccess,
+  onStepChange,
 }: VerifyFormProps) {
   const effectiveKey = encryptionKey || undefined;
   const effectiveVersion = version || undefined;
@@ -61,6 +69,11 @@ export function VerifyForm({
   });
 
   const [step, setStep] = React.useState<"verify" | "code">("verify");
+
+  // Notify parent component of step changes
+  React.useEffect(() => {
+    onStepChange?.(step);
+  }, [step, onStepChange]);
 
   // Reset code field when switching steps
   React.useEffect(() => {
@@ -153,7 +166,7 @@ export function VerifyForm({
 
   return (
     <Form {...form}>
-      <div className="space-y-4">
+      <div className="space-y-6">
         {step === "verify" ? (
           <>
             <FormField
@@ -184,6 +197,7 @@ export function VerifyForm({
                     <Input
                       type="email"
                       placeholder="Enter your email"
+                      disabled={!!defaultValues?.email}
                       {...field}
                     />
                   </FormControl>
@@ -227,11 +241,38 @@ export function VerifyForm({
                 <FormItem>
                   <FormLabel>Verification Code</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Enter 6-digit code"
-                      maxLength={6}
-                      {...field}
-                    />
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={field.value}
+                        onChange={field.onChange}
+                        render={({ slots }) => (
+                          <>
+                            <InputOTPGroup>
+                              {slots.slice(0, 3).map((slot, index) => (
+                                <InputOTPSlot
+                                  key={index}
+                                  index={index}
+                                  {...slot}
+                                  className="w-12 h-12 text-2xl"
+                                />
+                              ))}
+                            </InputOTPGroup>
+                            <InputOTPSeparator />
+                            <InputOTPGroup>
+                              {slots.slice(3, 6).map((slot, index) => (
+                                <InputOTPSlot
+                                  key={index + 3}
+                                  index={index + 3}
+                                  {...slot}
+                                  className="w-12 h-12 text-2xl"
+                                />
+                              ))}
+                            </InputOTPGroup>
+                          </>
+                        )}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -1,5 +1,5 @@
 {
-  "id": "916f9cfa-890a-4adf-b596-f0ce42d50a96",
+  "id": "6addf25b-5874-462f-9af2-8cf3f8cfb9ef",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -335,13 +335,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "serial_number"
-          ]
-        },
-        "items_mint_number_unique": {
-          "name": "items_mint_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "mint_number"
           ]
         },
         "items_nfc_serial_number_unique": {

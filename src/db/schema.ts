@@ -36,7 +36,7 @@ export const items = pgTable("items", {
   sku: varchar("sku", { length: 64 })
     .notNull()
     .references(() => skus.code),
-  mintNumber: varchar("mint_number", { length: 64 }).unique().notNull(),
+  mintNumber: varchar("mint_number", { length: 64 }).notNull(),
   weight: varchar("weight", { length: 32 }).notNull(),
   nfcSerialNumber: varchar("nfc_serial_number", { length: 64 })
     .unique()

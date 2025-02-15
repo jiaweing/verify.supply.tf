@@ -1,4 +1,6 @@
 import { EndSessionButton } from "@/components/end-session-button";
+import { ItemImages } from "@/components/item-images";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,7 +10,9 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { validateSession } from "@/lib/auth";
+import { ChevronLeft } from "lucide-react";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 export default async function ItemVerificationPage(props: {
@@ -59,6 +63,19 @@ export default async function ItemVerificationPage(props: {
 
   return (
     <div className="container max-w-4xl py-10 mx-auto space-y-6">
+      <div className="w-full flex justify-start mb-4">
+        <Link href="/">
+          <Button variant="ghost">
+            <ChevronLeft /> Back
+          </Button>
+        </Link>
+      </div>
+      <div className="flex flex-col justify-center items-center space-y-4">
+        <ItemImages sku={item.sku} />
+        <h1 className="text-xl font-semibold capitalize">
+          {item.sku.split("_")[0].toLowerCase()}
+        </h1>
+      </div>
       <Card className="text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">
@@ -133,6 +150,14 @@ export default async function ItemVerificationPage(props: {
         <CardContent>
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
+              <dt className="font-medium">Original Owner Name</dt>
+              <dd className="text-gray-500">{item.originalOwnerName}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">Original Owner Email</dt>
+              <dd className="text-gray-500">{item.originalOwnerEmail}</dd>
+            </div>
+            <div>
               <dt className="font-medium">Manufacture Date</dt>
               <dd className="text-gray-500">
                 {item.manufactureDate.toLocaleDateString()}
@@ -141,6 +166,50 @@ export default async function ItemVerificationPage(props: {
             <div>
               <dt className="font-medium">Produced At</dt>
               <dd className="text-gray-500">{item.producedAt}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">Purchased From</dt>
+              <dd className="text-gray-500">{item.purchasedFrom}</dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
+
+      <Card className="text-center">
+        <CardHeader>
+          <CardTitle>Blockchain Data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
+            <div>
+              <dt className="font-medium">Block ID</dt>
+              <dd className="text-gray-500 font-mono text-sm break-all">
+                {item.blockId}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">Current Block Hash</dt>
+              <dd className="text-gray-500 font-mono text-sm break-all">
+                {item.currentBlockHash}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">Previous Block Hash</dt>
+              <dd className="text-gray-500 font-mono text-sm break-all">
+                {item.previousBlockHash}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">Created At</dt>
+              <dd className="text-gray-500">
+                {item.createdAt.toLocaleString()}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">Modified At</dt>
+              <dd className="text-gray-500">
+                {item.modifiedAt.toLocaleString()}
+              </dd>
             </div>
           </dl>
         </CardContent>
@@ -152,32 +221,45 @@ export default async function ItemVerificationPage(props: {
             <CardTitle>Ownership History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 max-w-xl mx-auto">
-              {(item.ownershipHistory ?? []).map((history, index) => (
-                <div
-                  key={history.id}
-                  className="grid grid-cols-2 gap-4 items-center border-b last:border-0 pb-4 last:pb-0"
-                >
-                  <div className="text-center">
-                    <div className="font-medium">{history.ownerName}</div>
-                    <div className="text-sm text-gray-500">
-                      {history.transferDate.toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    {index === 0 && (
-                      <div className="text-sm font-medium text-green-600">
-                        Current Owner
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {(item.ownershipHistory ?? []).length === 0 && (
-                <div className="text-center text-gray-500">
-                  No ownership transfers yet
-                </div>
-              )}
+            <div className="max-w-xl mx-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left font-medium px-4 py-2">
+                      Owner Name
+                    </th>
+                    <th className="text-left font-medium px-4 py-2">Email</th>
+                    <th className="text-left font-medium px-4 py-2">
+                      Transfer Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(item.ownershipHistory ?? []).map((history) => (
+                    <tr key={history.id}>
+                      <td className="px-4 py-2 text-gray-500">
+                        {history.ownerName}
+                      </td>
+                      <td className="px-4 py-2 text-gray-500">
+                        {history.ownerEmail}
+                      </td>
+                      <td className="px-4 py-2 text-gray-500">
+                        {history.transferDate.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                  {(item.ownershipHistory ?? []).length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="text-center text-gray-500 px-4 py-2"
+                      >
+                        No ownership transfers yet
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
