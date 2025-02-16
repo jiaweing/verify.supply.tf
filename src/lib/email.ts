@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const companyName = "Supply.tf Verify";
+const companyName = "supply.tf";
 const supportEmail = env.SMTP_FROM;
 
 export type EmailType = "verify" | "transfer-request" | "transfer-confirmed";

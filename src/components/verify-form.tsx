@@ -16,11 +16,11 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 const verifySchema = z.object({
@@ -55,7 +55,6 @@ export function VerifyForm({
   const effectiveKey = encryptionKey || undefined;
   const effectiveVersion = version || undefined;
   const router = useRouter();
-  const { toast } = useToast();
 
   const form = useForm<FormData>({
     resolver: zodResolver(verifySchema),
@@ -115,19 +114,12 @@ export function VerifyForm({
           );
         }
 
-        toast({
-          title: "Code sent",
-          description: "Check your email for the verification code",
-        });
+        toast.success("Check your email for the verification code");
 
         setStep("code");
       } else {
         if (!values.code || values.code.length !== 6) {
-          toast({
-            title: "Error",
-            description: "Please enter a valid 6-digit code",
-            variant: "destructive",
-          });
+          toast.error("Please enter a valid 6-digit code");
           return;
         }
 
@@ -155,12 +147,9 @@ export function VerifyForm({
         }
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Verification failed",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Verification failed"
+      );
     }
   }
 

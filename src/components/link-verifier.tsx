@@ -1,10 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2, ScanFaceIcon, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
+import { toast } from "sonner";
 
 interface LinkVerifierProps {
   onShowForm?: () => void;
@@ -13,7 +13,6 @@ interface LinkVerifierProps {
 export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const [isInvalid, setIsInvalid] = React.useState(false);
 
   const key = searchParams.get("key");
@@ -48,11 +47,7 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
 
         if (!verifyRes.ok) {
           setIsInvalid(true);
-          toast({
-            title: "Error",
-            description: "This link is invalid",
-            variant: "destructive",
-          });
+          toast.error("This link is invalid");
           return;
         }
 
@@ -69,11 +64,7 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
       } catch (err) {
         console.error("Error verifying link:", err);
         setIsInvalid(true);
-        toast({
-          title: "Error",
-          description: "This link is invalid",
-          variant: "destructive",
-        });
+        toast.error("This link is invalid");
       }
     }
 
