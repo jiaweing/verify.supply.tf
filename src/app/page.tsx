@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { VerifyForm } from "@/components/verify-form";
+import { VerifyCard } from "@/components/verify-card";
 import { validateSession } from "@/lib/auth";
 import { ChevronRight, Clock } from "lucide-react";
 import { cookies } from "next/headers";
@@ -24,21 +24,11 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="space-y-4">
-        <Card className="w-[400px]">
-          <CardHeader>
-            <CardTitle>Verify Item</CardTitle>
-            <CardDescription>
-              Enter your item details to verify authenticity.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <VerifyForm />
-          </CardContent>
-        </Card>
+      <div className="space-y-4 w-[400px]">
+        <VerifyCard />
 
         {itemId && (
-          <Card className="w-[400px]">
+          <Card>
             <CardHeader>
               <CardTitle className="text-xl flex flex-row items-center space-x-2">
                 <Clock className="h-5 w-5 text-muted-foreground" />{" "}
