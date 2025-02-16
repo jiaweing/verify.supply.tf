@@ -173,6 +173,7 @@ export async function PUT(
         currentOwnerName: transfer.newOwnerName,
         currentOwnerEmail: transfer.newOwnerEmail,
         timestamp: timestamp.toISOString(), // Use exact same timestamp in hash and DB
+        previousBlockHash: item.currentBlockHash, // Include previous block hash in the data being hashed
       };
 
       console.log("Transfer block hash generation:", {

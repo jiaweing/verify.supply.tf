@@ -21,45 +21,59 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
 
   React.useEffect(() => {
     async function verifyAndRedirect() {
-      if (key && version) {
-        try {
-          // First check if user is already authenticated
-          const sessionRes = await fetch("/api/session");
-          const sessionData = await sessionRes.json();
+      if (!key || !version) return;
 
-          if (sessionRes.ok && sessionData.itemId) {
-            // If authenticated, redirect directly to item page
-            router.push(`/items/${sessionData.itemId}`);
-            return;
-          }
+      try {
+        // Get current session data
+        const sessionRes = await fetch("/api/session");
+        const sessionData = await sessionRes.json();
 
-          // Otherwise verify the NFC link
-          const res = await fetch(
-            `/api/items/verify?key=${key}&version=${version}`
-          );
-          const data = await res.json();
+        console.log("Session Response:", {
+          status: sessionRes.status,
+          ok: sessionRes.ok,
+          data: sessionData,
+        });
 
-          if (res.ok) {
-            router.push(
-              `/items/${data.productId}/verify?key=${key}&version=${version}`
-            );
-          } else {
-            setIsInvalid(true);
-            toast({
-              title: "Error",
-              description: "This link is invalid",
-              variant: "destructive",
-            });
-          }
-        } catch (err) {
-          console.error("Error verifying link:", err);
+        // Verify the NFC tag
+        const verifyRes = await fetch(
+          `/api/items/verify?key=${key}&version=${version}`
+        );
+        const verifyData = await verifyRes.json();
+
+        console.log("Verify Response:", {
+          status: verifyRes.status,
+          ok: verifyRes.ok,
+          data: verifyData,
+        });
+
+        if (!verifyRes.ok) {
           setIsInvalid(true);
           toast({
             title: "Error",
             description: "This link is invalid",
             variant: "destructive",
           });
+          return;
         }
+
+        // If we have a valid session and matching item ID, redirect to item page
+        if (sessionRes.ok && sessionData.itemId === verifyData.productId) {
+          router.push(`/items/${verifyData.productId}`);
+          return;
+        }
+
+        // For any other case, proceed to verification page
+        router.push(
+          `/items/${verifyData.productId}/verify?key=${key}&version=${version}`
+        );
+      } catch (err) {
+        console.error("Error verifying link:", err);
+        setIsInvalid(true);
+        toast({
+          title: "Error",
+          description: "This link is invalid",
+          variant: "destructive",
+        });
       }
     }
 

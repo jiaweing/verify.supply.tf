@@ -206,6 +206,7 @@ export async function POST(request: Request) {
     const mintNumber = sku.currentMintNumber.toString().padStart(4, "0");
 
     const timestamp = new Date();
+    const genesisHash = "0".repeat(64);
     const blockData = {
       blockId,
       serialNumber: parsed.data.serialNumber,
@@ -221,6 +222,7 @@ export async function POST(request: Request) {
       manufactureDate: parsed.data.manufactureDate,
       producedAt: parsed.data.producedAt,
       timestamp: timestamp,
+      previousBlockHash: genesisHash, // Include genesis hash in the block data
     };
 
     console.log("Block data:", blockData);
