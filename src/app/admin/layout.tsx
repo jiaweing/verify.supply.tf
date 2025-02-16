@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { AdminLogoutButton } from "@/components/admin-logout-button";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -31,11 +31,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
             </nav>
           </div>
           <div className="flex flex-1 items-center justify-end">
-            <form action="/api/auth/admin/logout" method="POST">
-              <Button variant="ghost" type="submit" size="sm">
-                Logout
-              </Button>
-            </form>
+            <AdminLogoutButton />
           </div>
         </div>
       </header>

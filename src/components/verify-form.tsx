@@ -17,6 +17,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -68,6 +69,7 @@ export function VerifyForm({
   });
 
   const [step, setStep] = React.useState<"verify" | "code">("verify");
+  const [isLoading, setIsLoading] = React.useState(false);
 
   // Notify parent component of step changes
   React.useEffect(() => {
@@ -84,6 +86,7 @@ export function VerifyForm({
   const [verifiedData, setVerifiedData] = React.useState<Partial<FormData>>({});
 
   async function onSubmit(values: FormData) {
+    setIsLoading(true);
     try {
       if (step === "verify") {
         // Store the verified data before requesting code
@@ -117,6 +120,7 @@ export function VerifyForm({
         toast.success("Check your email for the verification code");
 
         setStep("code");
+        setIsLoading(false);
       } else {
         if (!values.code || values.code.length !== 6) {
           toast.error("Please enter a valid 6-digit code");
@@ -139,6 +143,7 @@ export function VerifyForm({
         }
 
         const data = await res.json();
+        setIsLoading(false);
         if (onSuccess) {
           onSuccess(data);
         } else {
@@ -147,6 +152,7 @@ export function VerifyForm({
         }
       }
     } catch (error) {
+      setIsLoading(false);
       toast.error(
         error instanceof Error ? error.message : "Verification failed"
       );
@@ -217,8 +223,16 @@ export function VerifyForm({
               type="button"
               className="w-full"
               onClick={form.handleSubmit(onSubmit)}
+              disabled={isLoading}
             >
-              Verify
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify"
+              )}
             </Button>
           </>
         ) : (
@@ -272,8 +286,16 @@ export function VerifyForm({
               type="button"
               className="w-full"
               onClick={form.handleSubmit(onSubmit)}
+              disabled={isLoading}
             >
-              Submit Code
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Code"
+              )}
             </Button>
           </>
         )}
