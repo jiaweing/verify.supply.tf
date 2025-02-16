@@ -1,4 +1,5 @@
 import { AdminLogoutButton } from "@/components/admin-logout-button";
+import { Toaster } from "sonner";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -30,6 +31,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
               </a>
             </nav>
           </div>
+          <Toaster richColors position="top-center" />
           <div className="flex flex-1 items-center justify-end">
             <AdminLogoutButton />
           </div>
