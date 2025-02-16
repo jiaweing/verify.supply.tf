@@ -177,7 +177,7 @@ export default async function ItemVerificationPage(props: {
 
       <Card className="text-center">
         <CardHeader>
-          <CardTitle>Blockchain Data</CardTitle>
+          <CardTitle>Blockchain</CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">

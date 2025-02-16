@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { authCodes, items } from "@/db/schema";
 import { generateAuthCode } from "@/lib/auth";
+import { sendEmail } from "@/lib/email";
 import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -65,8 +66,12 @@ export async function POST(req: NextRequest) {
       expiresAt,
     });
 
-    // TODO: Send email with code
-    console.log(`Auth code for ${email}: ${code}`);
+    // Send verification email
+    await sendEmail({
+      to: email,
+      type: "verify",
+      data: { code },
+    });
 
     return Response.json({ message: "Auth code sent" });
   } catch (error) {

@@ -8,7 +8,7 @@ export function EndSessionButton() {
   const router = useRouter();
   const handleEndSession = () => {
     // call the api
-    fetch("/api/session", {
+    fetch("/api/logout", {
       method: "DELETE",
     });
     router.push("/");

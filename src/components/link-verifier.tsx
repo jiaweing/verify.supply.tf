@@ -23,6 +23,17 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
     async function verifyAndRedirect() {
       if (key && version) {
         try {
+          // First check if user is already authenticated
+          const sessionRes = await fetch("/api/session");
+          const sessionData = await sessionRes.json();
+
+          if (sessionRes.ok && sessionData.itemId) {
+            // If authenticated, redirect directly to item page
+            router.push(`/items/${sessionData.itemId}`);
+            return;
+          }
+
+          // Otherwise verify the NFC link
           const res = await fetch(
             `/api/items/verify?key=${key}&version=${version}`
           );
