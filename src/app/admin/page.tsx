@@ -48,12 +48,14 @@ export default async function AdminPage({
   // Fetch items with search filter and pagination
   const itemList = await db.query.items.findMany({
     orderBy: (items, { desc }) => [desc(items.createdAt)],
-    where: (items, { or, ilike }) =>
-      or(
-        ilike(items.serialNumber, `%${search}%`),
-        ilike(items.sku, `%${search}%`),
-        ilike(items.currentOwnerName, `%${search}%`)
-      ),
+    where: search
+      ? (items, { or, like }) =>
+          or(
+            like(items.serialNumber, `%${search}%`),
+            like(items.sku, `%${search}%`),
+            like(items.originalOwnerName, `%${search}%`)
+          )
+      : undefined,
   });
 
   // Calculate pagination
@@ -97,7 +99,7 @@ export default async function AdminPage({
                 <TableHead>Serial Number</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Mint Number</TableHead>
-                <TableHead>Current Owner</TableHead>
+                <TableHead>Original Owner</TableHead>
                 <TableHead>NFC Link</TableHead>
               </TableRow>
             </TableHeader>
@@ -109,7 +111,7 @@ export default async function AdminPage({
                   serialNumber={item.serialNumber}
                   sku={item.sku}
                   mintNumber={item.mintNumber}
-                  currentOwnerName={item.currentOwnerName}
+                  originalOwnerName={item.originalOwnerName}
                   nfcLink={item.nfcLink}
                 />
               ))}

@@ -106,26 +106,6 @@ export default async function ItemPage(props: {
           </CardContent>
         </Card>
 
-        {/* Current Owner */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Owner</CardTitle>
-            <CardDescription>Current ownership details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-4">
-              <div>
-                <dt className="font-medium">Name</dt>
-                <dd className="text-gray-500">{item.currentOwnerName}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Email</dt>
-                <dd className="text-gray-500">{item.currentOwnerEmail}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
         {/* Origin Information */}
         <Card>
           <CardHeader>
@@ -147,7 +127,7 @@ export default async function ItemPage(props: {
               <div>
                 <dt className="font-medium">Purchase Date</dt>
                 <dd className="text-gray-500">
-                  {item.purchaseDate.toLocaleDateString()}
+                  {item.originalPurchaseDate.toLocaleDateString()}
                 </dd>
               </div>
               <div>
@@ -198,12 +178,6 @@ export default async function ItemPage(props: {
                 <dt className="font-medium">Created At</dt>
                 <dd className="text-gray-500">
                   {item.createdAt.toLocaleString()}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium">Modified At</dt>
-                <dd className="text-gray-500">
-                  {item.modifiedAt.toLocaleString()}
                 </dd>
               </div>
             </dl>
@@ -258,20 +232,26 @@ export default async function ItemPage(props: {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {item.ownershipHistory.map((history) => (
-                  <TableRow key={history.id}>
-                    <TableCell>{history.newOwnerName}</TableCell>
-                    <TableCell>{history.newOwnerEmail}</TableCell>
-                    <TableCell>{history.createdAt.toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-                {item.ownershipHistory.length === 0 && (
+                {item.ownershipHistory.length > 0 ? (
+                  item.ownershipHistory.map((history) => (
+                    <TableRow key={history.id}>
+                      <TableCell>{history.newOwnerName}</TableCell>
+                      <TableCell>{history.newOwnerEmail}</TableCell>
+                      <TableCell>
+                        {history.createdAt.toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-center text-gray-500"
-                    >
-                      No ownership transfers yet
+                    <TableCell className="text-gray-500">
+                      {item.originalOwnerName}
+                    </TableCell>
+                    <TableCell className="text-gray-500">
+                      {item.originalOwnerEmail}
+                    </TableCell>
+                    <TableCell className="text-gray-500">
+                      {item.createdAt.toLocaleString()}
                     </TableCell>
                   </TableRow>
                 )}

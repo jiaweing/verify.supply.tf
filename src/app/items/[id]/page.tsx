@@ -8,10 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { db } from "@/db";
 import { validateSession } from "@/lib/auth";
-import { verifyItemChain } from "@/lib/blockchain";
-import { ChevronLeft, Verified, X } from "lucide-react";
+import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
+import { Link as Chain, ChevronLeft, Verified, X } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -48,6 +53,11 @@ export default async function ItemVerificationPage(props: {
             },
             creationBlock: true,
             latestTransaction: {
+              with: {
+                block: true,
+              },
+            },
+            transactions: {
               with: {
                 block: true,
               },
@@ -175,13 +185,19 @@ export default async function ItemVerificationPage(props: {
         <CardContent>
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
-              <dt className="font-medium">Name</dt>
-              <dd className="text-gray-500">{item.currentOwnerName}</dd>
+              <dt className="font-medium">Current Owner</dt>
+              <dd className="text-gray-500">
+                {getCurrentOwner(item.transactions, item).currentOwnerName} (
+                {getCurrentOwner(item.transactions, item).currentOwnerEmail})
+              </dd>
             </div>
             <div>
-              <dt className="font-medium">Purchase Date</dt>
+              <dt className="font-medium">Last Transfer</dt>
               <dd className="text-gray-500">
-                {item.purchaseDate.toLocaleDateString()}
+                {getCurrentOwner(
+                  item.transactions,
+                  item
+                ).lastTransferDate.toLocaleString()}
               </dd>
             </div>
           </dl>
@@ -223,38 +239,116 @@ export default async function ItemVerificationPage(props: {
       <Card className="text-center">
         <CardHeader>
           <CardTitle>Blockchain</CardTitle>
-          {chainVerification.isValid ? (
-            <CardDescription className="text-green-600 font-medium flex flex-row items-center space-x-1 mx-auto">
-              <Verified className="h-4 w-4" />{" "}
-              <div>Blockchain is valid and unmodified</div>
-            </CardDescription>
-          ) : (
-            <CardDescription className="text-red-600 font-medium flex flex-row items-center space-x-1 mx-auto">
-              <X className="h-4 w-4" />{" "}
-              <div>Chain verification failed: {chainVerification.error}</div>
-            </CardDescription>
-          )}
+          <Popover>
+            <PopoverTrigger asChild>
+              {chainVerification.isValid ? (
+                <Button
+                  variant="ghost"
+                  className="text-green-600 font-semibold"
+                >
+                  <Verified className="h-4 w-4 mr-1" /> The chain is valid
+                </Button>
+              ) : (
+                <Button variant="ghost" className="text-red-600 font-semibold">
+                  <X className="h-4 w-4 mr-1" /> Invalid chain detected
+                </Button>
+              )}
+            </PopoverTrigger>
+            <PopoverContent className="w-[600px]">
+              <div className="space-y-4">
+                <div>
+                  {chainVerification.isValid ? (
+                    <>
+                      <h4 className="font-semibold text-green-600 flex items-center">
+                        <Verified className="h-4 w-4 mr-1" /> Valid Chain
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        The blockchain hash chain is valid and has not been
+                        tampered with.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="font-semibold text-red-600 flex items-center">
+                        <X className="h-4 w-4 mr-1" /> Invalid Chain
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        {chainVerification.error ? (
+                          chainVerification.error.includes(
+                            "Item data does not match"
+                          ) ? (
+                            <>
+                              <span className="font-medium text-red-600">
+                                Data Tampering Detected
+                              </span>
+                              <br />
+                              The current owner information has been modified
+                              outside of proper blockchain transactions. This
+                              indicates unauthorized changes to the item&apos;s
+                              data.
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-medium text-red-600">
+                                Blockchain Error:
+                              </span>
+                              <br />
+                              {chainVerification.error}
+                            </>
+                          )
+                        ) : (
+                          "Unknown verification error"
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-2 flex flex-row items-center gap-2">
+                    Hash Comparison
+                    <div className="text-xs font-mono break-all text-muted-foreground">
+                      ({new Date().toISOString()})
+                    </div>
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="mb-1">
+                        <span className="text-sm font-medium text-gray-500">
+                          Creation Block
+                        </span>
+                        <span className="ml-2 text-xs text-gray-400">
+                          (Original)
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono break-all">
+                        {item.creationBlock?.hash}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center relative">
+                      <Chain className="text-muted-foreground p-1 absolute bg-background" />
+                      <div className="w-px h-20 bg-muted" />
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="mb-1">
+                        <span className="text-sm font-medium text-gray-500">
+                          Latest Block
+                        </span>
+                        <span className="ml-2 text-xs text-gray-400">
+                          (Current)
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono break-all">
+                        {item.latestTransaction?.block?.hash}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
-            <div>
-              <dt className="font-medium">Creation Block</dt>
-              <dd className="text-gray-500 font-mono text-sm break-all">
-                {item.creationBlock?.hash}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium">Latest Block</dt>
-              <dd className="text-gray-500 font-mono text-sm break-all">
-                {item.latestTransaction?.block?.hash}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium">Previous Block</dt>
-              <dd className="text-gray-500 font-mono text-sm break-all">
-                {item.latestTransaction?.block?.previousHash}
-              </dd>
-            </div>
             <div>
               <dt className="font-medium">Created At</dt>
               <dd className="text-gray-500">
@@ -262,9 +356,9 @@ export default async function ItemVerificationPage(props: {
               </dd>
             </div>
             <div>
-              <dt className="font-medium">Modified At</dt>
+              <dt className="font-medium">Transfer Count</dt>
               <dd className="text-gray-500">
-                {item.modifiedAt.toLocaleString()}
+                {getCurrentOwner(item.transactions, item).transferCount}
               </dd>
             </div>
           </dl>

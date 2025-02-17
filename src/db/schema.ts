@@ -67,19 +67,20 @@ export const items = pgTable("items", {
   originalOwnerEmail: varchar("original_owner_email", {
     length: 255,
   }).notNull(),
-  currentOwnerName: varchar("current_owner_name", { length: 255 }).notNull(),
-  currentOwnerEmail: varchar("current_owner_email", { length: 255 }).notNull(),
-  purchaseDate: timestamp("purchase_date").notNull(),
+  // Original ownership info (immutable)
+  originalPurchaseDate: timestamp("original_purchase_date").notNull(),
   purchasedFrom: varchar("purchased_from", { length: 255 }).notNull(),
   manufactureDate: timestamp("manufacture_date").notNull(),
   producedAt: varchar("produced_at", { length: 255 }).notNull(),
+
+  // Chain linkage
   creationBlockId: integer("creation_block_id").references(() => blocks.id),
   latestTransactionId: integer("latest_transaction_id").references(
     () => transactions.id
   ),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
+
+  // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  modifiedAt: timestamp("modified_at").defaultNow().notNull(),
   itemEncryptionKeyHash: varchar("item_encryption_key_hash", {
     length: 64,
   }).notNull(),

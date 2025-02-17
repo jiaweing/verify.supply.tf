@@ -1,158 +1,206 @@
-# Supply Chain Verification System
+<div align="center">
 
-A Next.js-based web application for verifying the authenticity and tracking the ownership history of supply chain items using blockchain technology.
+# 🔐 verify.supply.tf
 
-## Features
+A blockchain-based verification system for tracking and verifying product authenticity and ownership.
 
-- **Item Verification**: Verify the authenticity of items using unique identifiers
-- **Ownership History**: Track complete ownership history through blockchain transactions
-- **Admin Dashboard**: Manage items, view transfers, and monitor system activity
-- **Email Authentication**: Secure authentication system using email verification codes
-- **User Sessions**: Temporary access sessions for item verification
-- **Multi-Image Support**: Support for multiple item images (front/back, variations)
+Used in <a href="https://supply.tf">SUPPLY: THE FUTURE</a> apparel.
 
-## Tech Stack
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Blockchain](https://img.shields.io/badge/Blockchain-121D33?style=for-the-badge&logo=blockchain.com&logoColor=white)](https://blockchain.com)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
 
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **Authentication**: Custom email-based auth system
-- **Container**: Docker & Docker Compose
-- **Security**: Encryption utilities for sensitive data
-- **API**: REST endpoints with Next.js Route Handlers
-- **State Management**: React Server Components + Client Hooks
+</div>
 
-## Getting Started
+---
+
+## 🌟 Features
+
+<div align="center">
+
+| Feature                        | Description                                 |
+| ------------------------------ | ------------------------------------------- |
+| 🔒 **Blockchain Verification** | Immutable history tracking for each item    |
+| 👤 **Ownership Tracking**      | Complete chain of custody through transfers |
+| 🛡️ **Tamper Detection**        | Identifies unauthorized modifications       |
+| 📱 **NFC Integration**         | Physical-digital item linkage               |
+
+</div>
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    A[Physical Item] -->|NFC Tag| B[Digital Certificate]
+    B --> C[Blockchain]
+    C -->|Creation Block| D[Genesis Transaction]
+    C -->|Transfer Blocks| E[Ownership History]
+    E -->|Verification| F[Current State]
+```
+
+### 🔗 Blockchain Implementation
+
+<details>
+<summary>Click to expand</summary>
+
+#### 📦 Blocks
+
+- Single transaction per block
+- Cryptographic hash chaining
+- Merkle tree verification
+
+#### 📝 Transactions
+
+- Creation records
+- Transfer records
+- Hashed data storage
+
+#### ✅ Verification
+
+- Chain integrity checks
+- Transaction validation
+- State verification
+
+</details>
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Node.js 18+
-- pnpm
-- PostgreSQL
-- Docker (optional)
+- PostgreSQL 15+
+- pnpm (recommended)
 
-### Environment Variables
+### 🔧 Setup
 
-Create a `.env` file in the root directory:
-
-```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
-
-# Authentication
-ADMIN_EMAIL="admin@example.com"
-ADMIN_PASSWORD="securepassword"
-
-# Email (for verification codes)
-EMAIL_SERVER_HOST="smtp.example.com"
-EMAIL_SERVER_PORT="587"
-EMAIL_SERVER_USER="user@example.com"
-EMAIL_SERVER_PASSWORD="password"
-EMAIL_FROM="noreply@example.com"
-
-# Encryption
-ENCRYPTION_KEY="32-char-key"
-```
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-3. Initialize encryption key:
-   ```bash
-   pnpm run init-key
-   ```
-4. Set up the database:
-   ```bash
-   pnpm run db:push
-   ```
-5. Seed initial data (optional):
-   ```bash
-   pnpm run db:seed
-   ```
-
-### Development
-
-Start the development server:
+1. **Clone & Install**
 
 ```bash
-pnpm run dev
+git clone https://github.com/jiaweing/verify.supply.tf.git
+cd verify.supply.tf
+pnpm install
 ```
 
-The application will be available at http://localhost:3000
-
-### Production
-
-Build the application:
+2. **Configure Environment**
 
 ```bash
-pnpm run build
+cp .env.example .env
+# Edit .env with your settings
 ```
 
-Start the production server:
+3. **Initialize Database**
 
 ```bash
+pnpm db:push
+
+# seed initial admin user and key
+pnpm db:seed
+```
+
+4. **Start Development**
+
+```bash
+pnpm dev
+```
+
+## 🔍 Verification Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Blockchain
+    participant Database
+
+    User->>App: Scan NFC Tag
+    App->>Blockchain: Fetch Chain
+    Blockchain->>App: Return History
+    App->>App: Verify Chain
+    App->>Database: Get Item Details
+    App->>User: Show Verification
+```
+
+## 🔐 Security Features
+
+| Feature                     | Description                              |
+| --------------------------- | ---------------------------------------- |
+| 🔗 **Blockchain Integrity** | Every change recorded in immutable chain |
+| 📧 **Email Verification**   | Two-factor transfer confirmation         |
+| ⏱️ **Time Limits**          | Expiring transfer requests               |
+| 🔒 **Encryption**           | Secure item data storage                 |
+| 📱 **NFC Authentication**   | Physical verification link               |
+
+## 📚 API Documentation
+
+### Item Verification
+
+```typescript
+GET /api/items/:id         // Get item details
+POST /api/items/:id/verify // Verify authenticity
+GET /api/items/:id/chain   // Get blockchain history
+```
+
+### Ownership Transfer
+
+```typescript
+POST /api/items/:id/transfer  // Start transfer
+PUT /api/items/:id/transfer   // Confirm transfer
+```
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+pnpm test
+
+# Run E2E tests
+pnpm test:e2e
+```
+
+## 🚀 Deployment
+
+### Using Docker
+
+```bash
+# Build and run containers
+docker-compose up -d
+```
+
+### Manual Deployment
+
+```bash
+pnpm build
 pnpm start
 ```
 
-### Docker Deployment
+## 🤝 Contributing
 
-1. Build the image:
+1. Fork repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch
+5. Open pull request
 
-   ```bash
-   docker build -t supply-verify .
-   ```
+## 📄 License
 
-2. Run with Docker Compose:
-   ```bash
-   docker-compose up -d
-   ```
+This project is licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 
-## Project Structure
+### Key Points:
 
-- `/src`
-  - `/app` - Next.js app router pages and API routes
-  - `/components` - Reusable React components
-  - `/db` - Database schema and configuration
-  - `/hooks` - Custom React hooks
-  - `/lib` - Utility functions and shared logic
-  - `/scripts` - Setup and maintenance scripts
+- ✅ Freedom to use, modify, and distribute
+- ✅ Source code must be made available when the software is distributed
+- ✅ Network use counts as distribution
+- ✅ Changes must be shared under the same license
+- ✅ Modifications must state significant changes made
 
-## API Routes
+See the [LICENSE](LICENSE) file for the full text of the AGPLv3 license.
 
-### Authentication
+---
 
-- `POST /api/auth/request-code` - Request email verification code
-- `POST /api/auth/verify-code` - Verify email code
-- `POST /api/auth/admin/login` - Admin login
-- `POST /api/auth/admin/logout` - Admin logout
+<div align="center">
 
-### Items
+Built with ❤️ by <a href="https://supply.tf">SUPPLY: THE FUTURE</a>
 
-- `GET /api/items` - List all items
-- `POST /api/items` - Create new item (admin)
-- `GET /api/items/[id]` - Get item details
-- `POST /api/items/[id]/transfer` - Transfer item ownership
-- `GET /api/items/[id]/transactions` - Get item transaction history
-- `POST /api/items/verify` - Verify item authenticity
-
-### Sessions
-
-- `GET /api/session` - Get current session
-- `POST /api/logout` - End current session
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-This project is proprietary and confidential. All rights reserved.
+</div>

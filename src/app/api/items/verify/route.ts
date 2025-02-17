@@ -123,11 +123,16 @@ export async function GET(request: Request) {
       return Response.json({ error: "Item not found" }, { status: 404 });
     }
 
+    // Get current owner from ownership history or original owner if no transfers
+    const latestTransferData = item.latestTransaction?.data as TransferData;
+    const currentEmail =
+      latestTransferData?.to?.email || item.originalOwnerEmail;
+
     return Response.json({
       productId: item.id.toString(),
-      email: item.currentOwnerEmail,
+      email: currentEmail,
       serialNumber: item.serialNumber,
-      purchaseDate: item.purchaseDate,
+      purchaseDate: item.originalPurchaseDate,
     });
   } catch (err) {
     console.error("Error verifying NFC link:", err);
@@ -243,12 +248,18 @@ async function verifyBlockchain(productId: string) {
   // Verify latest transaction matches item state
   const latestTransaction = itemTransactions[itemTransactions.length - 1];
   const transactionData = latestTransaction.data as TransactionData;
+  const latestEmail =
+    transactionData.type === "transfer"
+      ? transactionData.to.email
+      : (transactionData as CreateData).owner.email;
 
-  if (
-    transactionData.type === "transfer" &&
-    (transactionData.to.email !== item.currentOwnerEmail ||
-      transactionData.to.name !== item.currentOwnerName)
-  ) {
+  const latestTransactionData = latestTransaction.data as TransactionData;
+  const currentEmail =
+    latestTransactionData.type === "transfer"
+      ? (latestTransactionData as TransferData).to.email
+      : item.originalOwnerEmail;
+
+  if (latestEmail !== currentEmail) {
     return {
       isValid: false,
       error: "Current ownership does not match latest transaction",
@@ -276,14 +287,25 @@ export async function POST(request: Request) {
 
     const item = await db.query.items.findFirst({
       where: (items, { eq }) => eq(items.id, productId),
+      with: {
+        latestTransaction: true,
+      },
     });
 
     if (!item) {
       return Response.json({ error: "Item not found" }, { status: 404 });
     }
 
+    // Get current owner from latest transaction or original owner
+    const latestTransactionData = item.latestTransaction
+      ?.data as TransactionData;
+    const currentEmail =
+      latestTransactionData?.type === "transfer"
+        ? (latestTransactionData as TransferData).to.email
+        : item.originalOwnerEmail;
+
     // Only allow verification by current owner
-    if (item.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
+    if (currentEmail.toLowerCase() !== email.toLowerCase()) {
       return Response.json(
         { error: "Email does not match current owner" },
         { status: 403 }

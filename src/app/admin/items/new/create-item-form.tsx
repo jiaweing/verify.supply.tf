@@ -51,9 +51,17 @@ export function CreateItemForm() {
       orderId: "",
       originalOwnerName: "",
       originalOwnerEmail: "",
-      purchaseDate: "2025-02-16",
+      purchaseDate: new Date(
+        new Date().getTime() - new Date().getTimezoneOffset() * 60000
+      )
+        .toISOString()
+        .split("T")[0],
       purchasedFrom: "WEBSITE",
-      manufactureDate: "2025-02-16",
+      manufactureDate: new Date(
+        new Date().getTime() - new Date().getTimezoneOffset() * 60000
+      )
+        .toISOString()
+        .split("T")[0],
       producedAt: "SINGAPORE",
     },
   });
@@ -61,7 +69,19 @@ export function CreateItemForm() {
   async function onSubmit(data: ItemFormValues) {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, value);
+      if (key === "purchaseDate" || key === "manufactureDate") {
+        const date = new Date(value);
+        formData.append(
+          key,
+          date.toLocaleDateString("en-US", {
+            month: "2-digit",
+            day: "2-digit",
+            year: "numeric",
+          })
+        );
+      } else {
+        formData.append(key, value);
+      }
     });
 
     const response = await fetch("/api/items", {

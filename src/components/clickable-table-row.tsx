@@ -12,7 +12,7 @@ interface ClickableTableRowProps {
   serialNumber: string;
   sku: string;
   mintNumber: number | string;
-  currentOwnerName: string;
+  originalOwnerName: string;
   nfcLink: string;
 }
 
@@ -21,7 +21,7 @@ export function ClickableTableRow({
   serialNumber,
   sku,
   mintNumber,
-  currentOwnerName,
+  originalOwnerName,
   nfcLink,
 }: ClickableTableRowProps) {
   const router = useRouter();
@@ -36,7 +36,7 @@ export function ClickableTableRow({
       <TableCell>
         #{typeof mintNumber === "string" ? mintNumber : mintNumber.toString()}
       </TableCell>
-      <TableCell>{currentOwnerName}</TableCell>
+      <TableCell>{originalOwnerName}</TableCell>
       <TableCell>
         <div
           className="flex items-center gap-2"

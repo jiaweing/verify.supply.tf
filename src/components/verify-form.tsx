@@ -63,7 +63,10 @@ export function VerifyForm({
       email: defaultValues?.email || "",
       serialNumber: defaultValues?.serialNumber || "",
       purchaseDate:
-        defaultValues?.purchaseDate || new Date().toISOString().split("T")[0],
+        defaultValues?.purchaseDate ||
+        new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+          .toISOString()
+          .split("T")[0],
       code: "", // Always initialize code as empty
     },
   });

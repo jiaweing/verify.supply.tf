@@ -1,5 +1,5 @@
 {
-  "id": "b937dbf5-85a6-4780-b696-c3694df4f65c",
+  "id": "07de7514-5e71-4926-8599-7ed999a9367c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -275,20 +275,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "current_owner_name": {
-          "name": "current_owner_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "current_owner_email": {
-          "name": "current_owner_email",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "purchase_date": {
-          "name": "purchase_date",
+        "original_purchase_date": {
+          "name": "original_purchase_date",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -323,22 +311,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "modified_at": {
-          "name": "modified_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,

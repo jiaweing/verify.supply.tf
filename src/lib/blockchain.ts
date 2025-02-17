@@ -53,8 +53,54 @@ export interface TransactionData {
   };
 }
 
-export interface TransactionHistoryItem extends DbTransaction {
-  block?: DbBlock;
+export interface TransactionHistoryItem extends Omit<DbTransaction, "block"> {
+  block: DbBlock | null;
+}
+
+export interface ItemOwnership {
+  currentOwnerName: string;
+  currentOwnerEmail: string;
+  lastTransferDate: Date;
+  transferCount?: number;
+}
+
+export function getCurrentOwner(
+  transactions: TransactionHistoryItem[],
+  item: {
+    originalOwnerName: string;
+    originalOwnerEmail: string;
+    createdAt: Date;
+  }
+): ItemOwnership {
+  // Sort transactions by timestamp to get the latest
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  // Find the latest transfer transaction
+  const latestTransfer = sortedTransactions.find(
+    (tx) => tx.transactionType === "transfer"
+  );
+
+  if (latestTransfer) {
+    const txData = latestTransfer.data as TransactionData;
+    return {
+      currentOwnerName: txData.data.to.name,
+      currentOwnerEmail: txData.data.to.email,
+      lastTransferDate: latestTransfer.timestamp,
+      transferCount: sortedTransactions.filter(
+        (tx) => tx.transactionType === "transfer"
+      ).length,
+    };
+  }
+
+  // If no transfers, return original owner
+  return {
+    currentOwnerName: item.originalOwnerName,
+    currentOwnerEmail: item.originalOwnerEmail,
+    lastTransferDate: item.createdAt,
+    transferCount: 0,
+  };
 }
 
 export class MerkleTree {
@@ -233,11 +279,24 @@ export async function verifyItemChain(
   db: Database,
   itemId: string
 ): Promise<{ isValid: boolean; error?: string }> {
+  const item = await db.query.items.findFirst({
+    where: (items, { eq }) => eq(items.id, itemId),
+    with: {
+      latestTransaction: true,
+    },
+  });
+
+  if (!item) {
+    return { isValid: false, error: "Item not found" };
+  }
+
   const transactions = await getItemTransactionHistory(db, itemId);
 
   if (transactions.length === 0) {
     return { isValid: false, error: "No transactions found for item" };
   }
+
+  // First verify the blockchain integrity
 
   // Verify transaction sequence
   for (let i = 0; i < transactions.length; i++) {
@@ -310,5 +369,6 @@ export async function verifyItemChain(
     }
   }
 
+  // All blockchain integrity checks passed
   return { isValid: true };
 }

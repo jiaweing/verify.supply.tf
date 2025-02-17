@@ -6,6 +6,16 @@ import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
+interface TransferData {
+  type: "transfer";
+  itemId: string;
+  timestamp: string;
+  to: {
+    name: string;
+    email: string;
+  };
+}
+
 const requestCodeSchema = z.object({
   email: z.string().email(),
   serialNumber: z.string().min(1),
@@ -30,9 +40,8 @@ export async function POST(req: NextRequest) {
 
     // Create base conditions
     const conditions = [
-      eq(items.currentOwnerEmail, email),
       eq(items.serialNumber, serialNumber),
-      eq(items.purchaseDate, new Date(purchaseDate)),
+      eq(items.originalPurchaseDate, new Date(purchaseDate)),
     ];
 
     if (version) {
@@ -42,12 +51,29 @@ export async function POST(req: NextRequest) {
     // Check if item exists with all conditions
     const item = await db.query.items.findFirst({
       where: and(...conditions),
+      with: {
+        latestTransaction: true,
+      },
     });
 
     if (!item) {
       return Response.json(
         { error: "No item found matching these details" },
         { status: 404 }
+      );
+    }
+
+    // Get current owner from latest transaction or original owner
+    const currentEmail = item.latestTransaction?.data
+      ? (item.latestTransaction.data as TransferData).to?.email ||
+        item.originalOwnerEmail
+      : item.originalOwnerEmail;
+
+    // Verify email matches current owner
+    if (currentEmail.toLowerCase() !== email.toLowerCase()) {
+      return Response.json(
+        { error: "Email does not match current owner" },
+        { status: 403 }
       );
     }
 
