@@ -1,7 +1,9 @@
 import { InferSelectModel, relations } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -28,10 +30,29 @@ export const skus = pgTable("skus", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Items table (renamed from items)
+// Blockchain tables
+export const blocks = pgTable("blocks", {
+  id: serial("id").primaryKey(),
+  blockNumber: bigint("block_number", { mode: "number" }).notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  previousHash: varchar("previous_hash", { length: 64 }).notNull(),
+  merkleRoot: varchar("merkle_root", { length: 64 }).notNull(),
+  nonce: bigint("nonce", { mode: "number" }).notNull(),
+  hash: varchar("hash", { length: 64 }).unique().notNull(),
+});
+
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  blockId: integer("block_id").references(() => blocks.id),
+  transactionType: varchar("transaction_type", { length: 32 }).notNull(), // 'create', 'transfer', etc.
+  itemId: uuid("item_id").notNull(), // Will be linked to items after items table is defined
+  data: jsonb("data").notNull(), // Stores transaction-specific data
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  hash: varchar("hash", { length: 64 }).unique().notNull(),
+});
+
 export const items = pgTable("items", {
   id: uuid("id").defaultRandom().primaryKey(),
-  blockId: varchar("block_id", { length: 64 }).unique().notNull(),
   serialNumber: varchar("serial_number", { length: 64 }).unique().notNull(),
   sku: varchar("sku", { length: 64 })
     .notNull()
@@ -52,8 +73,10 @@ export const items = pgTable("items", {
   purchasedFrom: varchar("purchased_from", { length: 255 }).notNull(),
   manufactureDate: timestamp("manufacture_date").notNull(),
   producedAt: varchar("produced_at", { length: 255 }).notNull(),
-  currentBlockHash: varchar("current_block_hash", { length: 64 }).notNull(),
-  previousBlockHash: varchar("previous_block_hash", { length: 64 }).notNull(),
+  creationBlockId: integer("creation_block_id").references(() => blocks.id),
+  latestTransactionId: integer("latest_transaction_id").references(
+    () => transactions.id
+  ),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   modifiedAt: timestamp("modified_at").defaultNow().notNull(),
@@ -62,16 +85,6 @@ export const items = pgTable("items", {
   }).notNull(),
   globalKeyVersion: varchar("global_key_version", { length: 64 }).notNull(),
   nfcLink: varchar("nfc_link", { length: 255 }).unique().notNull(),
-});
-
-export const ownershipHistory = pgTable("ownership_history", {
-  id: serial("id").primaryKey(),
-  itemId: uuid("item_id")
-    .references(() => items.id)
-    .notNull(),
-  ownerName: varchar("owner_name", { length: 255 }).notNull(),
-  ownerEmail: varchar("owner_email", { length: 255 }).notNull(),
-  transferDate: timestamp("transfer_date").defaultNow().notNull(),
 });
 
 export const ownershipTransfers = pgTable("ownership_transfers", {
@@ -124,26 +137,41 @@ export const authCodes = pgTable("auth_codes", {
 });
 
 // Relations
+export const blockRelations = relations(blocks, ({ many }) => ({
+  transactions: many(transactions),
+}));
+
+export const transactionRelations = relations(transactions, ({ one }) => ({
+  block: one(blocks, {
+    fields: [transactions.blockId],
+    references: [blocks.id],
+  }),
+  item: one(items, {
+    fields: [transactions.itemId],
+    references: [items.id],
+  }),
+}));
+
 export const itemRelations = relations(items, ({ many, one }) => ({
-  ownershipHistory: many(ownershipHistory),
-  ownershipTransfers: many(ownershipTransfers),
+  transactions: many(transactions),
+  ownershipHistory: many(ownershipTransfers, {
+    relationName: "ownershipHistory",
+  }),
   userPreferences: many(userPreferences),
   sessions: many(sessions),
   sku: one(skus, {
     fields: [items.sku],
     references: [skus.code],
   }),
+  creationBlock: one(blocks, {
+    fields: [items.creationBlockId],
+    references: [blocks.id],
+  }),
+  latestTransaction: one(transactions, {
+    fields: [items.latestTransactionId],
+    references: [transactions.id],
+  }),
 }));
-
-export const ownershipHistoryRelations = relations(
-  ownershipHistory,
-  ({ one }) => ({
-    item: one(items, {
-      fields: [ownershipHistory.itemId],
-      references: [items.id],
-    }),
-  })
-);
 
 export const ownershipTransfersRelations = relations(
   ownershipTransfers,
@@ -151,6 +179,7 @@ export const ownershipTransfersRelations = relations(
     item: one(items, {
       fields: [ownershipTransfers.itemId],
       references: [items.id],
+      relationName: "ownershipHistory",
     }),
   })
 );
@@ -175,8 +204,9 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 // Types
 export type AdminUser = InferSelectModel<typeof adminUsers>;
 export type Sku = InferSelectModel<typeof skus>;
+export type Block = InferSelectModel<typeof blocks>;
+export type Transaction = InferSelectModel<typeof transactions>;
 export type Item = InferSelectModel<typeof items>;
-export type OwnershipHistory = InferSelectModel<typeof ownershipHistory>;
 export type OwnershipTransfer = InferSelectModel<typeof ownershipTransfers>;
 export type UserPreference = InferSelectModel<typeof userPreferences>;
 export type GlobalEncryptionKey = InferSelectModel<typeof globalEncryptionKeys>;

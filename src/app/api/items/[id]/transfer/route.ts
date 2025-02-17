@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { items, ownershipHistory, ownershipTransfers } from "@/db/schema";
+import { blocks, items, ownershipTransfers, transactions } from "@/db/schema";
 import { env } from "@/env.mjs";
 import { validateSession } from "@/lib/auth";
+import { Block, TransactionData } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
-import crypto from "crypto";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
@@ -151,66 +151,96 @@ export async function PUT(
     }
 
     if (action === "confirm") {
-      // Get current item details for block hash calculation
+      // Get current item details
       const item = await db.query.items.findFirst({
         where: eq(items.id, transfer.itemId),
+        with: {
+          latestTransaction: {
+            with: {
+              block: true,
+            },
+          },
+        },
       });
 
       if (!item) {
         return Response.json({ error: "Item not found" }, { status: 404 });
       }
 
-      // Create block data with timestamp for this transfer
-      const timestamp = new Date();
-      const blockData = {
-        blockId: item.blockId,
-        serialNumber: item.serialNumber,
-        sku: item.sku,
-        mintNumber: item.mintNumber,
-        weight: item.weight,
-        nfcSerialNumber: item.nfcSerialNumber,
-        orderId: item.orderId,
-        currentOwnerName: transfer.newOwnerName,
-        currentOwnerEmail: transfer.newOwnerEmail,
-        timestamp: timestamp.toISOString(), // Use exact same timestamp in hash and DB
-        previousBlockHash: item.currentBlockHash, // Include previous block hash in the data being hashed
-      };
-
-      console.log("Transfer block hash generation:", {
-        previousHash: item.currentBlockHash,
-        timestamp: {
-          raw: timestamp,
-          used: blockData.timestamp,
-        },
-        blockData,
+      // Get the last block for chain linking
+      const lastBlock = await db.query.blocks.findFirst({
+        orderBy: (blocks, { desc }) => [desc(blocks.blockNumber)],
       });
 
-      const newBlockHash = crypto
-        .createHash("sha256")
-        .update(JSON.stringify(blockData))
-        .digest("hex");
+      const nextBlockNumber = (lastBlock?.blockNumber ?? 0) + 1;
+      // Generate timestamp once and use its ISO string consistently
+      const timestampISO = new Date().toISOString();
+      const timestamp = new Date(timestampISO); // For DB
 
-      // Update item ownership and blockchain data using the same timestamp
+      // Create transaction data
+      const transactionData: TransactionData = {
+        type: "transfer",
+        itemId: item.id,
+        timestamp: timestampISO,
+        data: {
+          from: {
+            name: item.currentOwnerName,
+            email: item.currentOwnerEmail,
+          },
+          to: {
+            name: transfer.newOwnerName,
+            email: transfer.newOwnerEmail,
+          },
+        },
+      };
+
+      // Create new block using the same timestamp
+      const block = new Block(
+        nextBlockNumber,
+        lastBlock?.hash ?? "0".repeat(64),
+        [transactionData],
+        timestampISO
+      );
+
+      const blockHash = block.calculateHash();
+      const merkleRoot = block.getMerkleTree().getRoot();
+
       await db.transaction(async (tx) => {
-        // Update item
+        // Create block record
+        const [newBlock] = await tx
+          .insert(blocks)
+          .values({
+            blockNumber: nextBlockNumber,
+            timestamp,
+            previousHash: lastBlock?.hash ?? "0".repeat(64),
+            merkleRoot,
+            nonce: 0,
+            hash: blockHash,
+          })
+          .returning();
+
+        // Create transaction record
+        const [newTransaction] = await tx
+          .insert(transactions)
+          .values({
+            blockId: newBlock.id,
+            transactionType: "transfer",
+            itemId: item.id,
+            data: transactionData,
+            hash: merkleRoot, // Since we have one transaction per block, this is the same as merkle root
+          })
+          .returning();
+
+        // Update item ownership
         await tx
           .update(items)
           .set({
             currentOwnerName: transfer.newOwnerName,
             currentOwnerEmail: transfer.newOwnerEmail,
-            modifiedAt: timestamp, // Use exact same timestamp as in hash
-            previousBlockHash: item.currentBlockHash,
-            currentBlockHash: newBlockHash,
+            modifiedAt: timestamp,
+            latestTransactionId: newTransaction.id,
           })
           .where(eq(items.id, transfer.itemId));
-
-        // Add to ownership history
-        await tx.insert(ownershipHistory).values({
-          itemId: transfer.itemId,
-          ownerName: transfer.newOwnerName,
-          ownerEmail: transfer.newOwnerEmail,
-          transferDate: timestamp,
-        });
 
         // Mark transfer as confirmed
         await tx

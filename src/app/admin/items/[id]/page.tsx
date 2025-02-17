@@ -43,7 +43,13 @@ export default async function ItemPage(props: {
     where: (items, { eq }) => eq(items.id, id),
     with: {
       ownershipHistory: {
-        orderBy: (history, { desc }) => [desc(history.transferDate)],
+        orderBy: (history, { desc }) => [desc(history.createdAt)],
+      },
+      creationBlock: true,
+      latestTransaction: {
+        with: {
+          block: true,
+        },
       },
     },
   });
@@ -171,21 +177,21 @@ export default async function ItemPage(props: {
           <CardContent>
             <dl className="grid grid-cols-2 gap-4">
               <div>
-                <dt className="font-medium">Block ID</dt>
+                <dt className="font-medium">Creation Block Hash</dt>
                 <dd className="text-gray-500 font-mono text-sm break-all">
-                  {item.blockId}
+                  {item.creationBlock?.hash}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium">Current Block Hash</dt>
+                <dt className="font-medium">Latest Block Hash</dt>
                 <dd className="text-gray-500 font-mono text-sm break-all">
-                  {item.currentBlockHash}
+                  {item.latestTransaction?.block?.hash}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Previous Block Hash</dt>
                 <dd className="text-gray-500 font-mono text-sm break-all">
-                  {item.previousBlockHash}
+                  {item.latestTransaction?.block?.previousHash}
                 </dd>
               </div>
               <div>
@@ -254,11 +260,9 @@ export default async function ItemPage(props: {
               <TableBody>
                 {item.ownershipHistory.map((history) => (
                   <TableRow key={history.id}>
-                    <TableCell>{history.ownerName}</TableCell>
-                    <TableCell>{history.ownerEmail}</TableCell>
-                    <TableCell>
-                      {history.transferDate.toLocaleString()}
-                    </TableCell>
+                    <TableCell>{history.newOwnerName}</TableCell>
+                    <TableCell>{history.newOwnerEmail}</TableCell>
+                    <TableCell>{history.createdAt.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
                 {item.ownershipHistory.length === 0 && (

@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { validateSession } from "@/lib/auth";
-import { ChevronLeft } from "lucide-react";
+import { verifyItemChain } from "@/lib/blockchain";
+import { ChevronLeft, Verified, X } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -27,20 +28,33 @@ export default async function ItemVerificationPage(props: {
   let isAuthenticated = false;
   let item = null;
 
+  const paramsId = params.id;
+
   if (sessionToken) {
-    const itemId = await validateSession(sessionToken);
-    console.log(itemId);
-    if (itemId) {
-      isAuthenticated = true;
-      item = await db.query.items.findFirst({
-        where: (items, { eq }) => eq(items.id, itemId),
-        with: {
-          userPreferences: true,
-          ownershipHistory: {
-            orderBy: (history, { desc }) => [desc(history.transferDate)],
+    const validatedItemId = await validateSession(sessionToken);
+    console.log("Validated Item ID:", validatedItemId);
+    console.log("Requested Item ID:", paramsId);
+
+    if (validatedItemId) {
+      // Make sure the validated item ID matches the requested item ID
+      if (validatedItemId === paramsId) {
+        isAuthenticated = true;
+        item = await db.query.items.findFirst({
+          where: (items, { eq }) => eq(items.id, paramsId),
+          with: {
+            userPreferences: true,
+            ownershipHistory: {
+              orderBy: (history, { desc }) => [desc(history.createdAt)],
+            },
+            creationBlock: true,
+            latestTransaction: {
+              with: {
+                block: true,
+              },
+            },
           },
-        },
-      });
+        });
+      }
     }
   }
 
@@ -59,6 +73,8 @@ export default async function ItemVerificationPage(props: {
     notFound();
   }
 
+  // Verify blockchain chain
+  const chainVerification = await verifyItemChain(db, item.id);
   const showHistory = item.userPreferences?.[0]?.showOwnershipHistory ?? true;
 
   return (
@@ -79,26 +95,55 @@ export default async function ItemVerificationPage(props: {
       <Card className="text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">
-            <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
-              <svg
-                className="w-16 h-16 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+            <div
+              className={`w-24 h-24 rounded-full ${
+                chainVerification.isValid ? "bg-green-100" : "bg-red-100"
+              } flex items-center justify-center`}
+            >
+              {chainVerification.isValid ? (
+                <svg
+                  className="w-16 h-16 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-16 h-16 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              )}
             </div>
           </div>
-          <CardTitle className="text-2xl">Verified</CardTitle>
-          <CardDescription className="text-lg">
-            This item is original & authentic.
+          <CardTitle className="text-2xl">
+            {chainVerification.isValid ? "Verified" : "Verification Failed"}
+          </CardTitle>
+          <CardDescription
+            className={`text-lg ${
+              chainVerification.isValid ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {chainVerification.isValid
+              ? "This item is original & authentic."
+              : "This item's blockchain has been tampered with."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -178,25 +223,36 @@ export default async function ItemVerificationPage(props: {
       <Card className="text-center">
         <CardHeader>
           <CardTitle>Blockchain</CardTitle>
+          {chainVerification.isValid ? (
+            <CardDescription className="text-green-600 font-medium flex flex-row items-center space-x-1 mx-auto">
+              <Verified className="h-4 w-4" />{" "}
+              <div>Blockchain is valid and unmodified</div>
+            </CardDescription>
+          ) : (
+            <CardDescription className="text-red-600 font-medium flex flex-row items-center space-x-1 mx-auto">
+              <X className="h-4 w-4" />{" "}
+              <div>Chain verification failed: {chainVerification.error}</div>
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
-              <dt className="font-medium">Block ID</dt>
+              <dt className="font-medium">Creation Block</dt>
               <dd className="text-gray-500 font-mono text-sm break-all">
-                {item.blockId}
+                {item.creationBlock?.hash}
               </dd>
             </div>
             <div>
-              <dt className="font-medium">Current Block Hash</dt>
+              <dt className="font-medium">Latest Block</dt>
               <dd className="text-gray-500 font-mono text-sm break-all">
-                {item.currentBlockHash}
+                {item.latestTransaction?.block?.hash}
               </dd>
             </div>
             <div>
-              <dt className="font-medium">Previous Block Hash</dt>
+              <dt className="font-medium">Previous Block</dt>
               <dd className="text-gray-500 font-mono text-sm break-all">
-                {item.previousBlockHash}
+                {item.latestTransaction?.block?.previousHash}
               </dd>
             </div>
             <div>
@@ -238,13 +294,13 @@ export default async function ItemVerificationPage(props: {
                   {(item.ownershipHistory ?? []).map((history) => (
                     <tr key={history.id}>
                       <td className="px-4 py-2 text-gray-500">
-                        {history.ownerName}
+                        {history.newOwnerName}
                       </td>
                       <td className="px-4 py-2 text-gray-500">
-                        {history.ownerEmail}
+                        {history.newOwnerEmail}
                       </td>
                       <td className="px-4 py-2 text-gray-500">
-                        {history.transferDate.toLocaleString()}
+                        {history.createdAt.toLocaleString()}
                       </td>
                     </tr>
                   ))}

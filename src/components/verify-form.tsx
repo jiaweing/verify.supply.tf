@@ -134,6 +134,7 @@ export function VerifyForm({
           body: JSON.stringify({
             email: verifiedData.email!,
             code: values.code,
+            itemId: itemId!,
           }),
         });
 

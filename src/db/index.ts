@@ -6,8 +6,7 @@ import * as schema from "./schema";
 // Create a PostgreSQL connection pool using the connection string
 const pool = new Pool({
   connectionString:
-    env.DATABASE_URL ||
-    "postgres://postgres:postgres@localhost:5432/verify_supply_tf",
+    env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/supply",
 });
 
 // Initialize drizzle with the pool and schema

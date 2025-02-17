@@ -3,7 +3,7 @@ import {
   authCodes,
   globalEncryptionKeys,
   items,
-  ownershipHistory,
+  transactions,
 } from "@/db/schema";
 import { createSession } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
@@ -12,6 +12,32 @@ import crypto from "crypto";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { env } from "process";
+
+interface TransferData {
+  type: "transfer";
+  itemId: string;
+  timestamp: string;
+  from: {
+    name: string;
+    email: string;
+  };
+  to: {
+    name: string;
+    email: string;
+  };
+}
+
+interface CreateData {
+  type: "create";
+  itemId: string;
+  timestamp: string;
+  owner: {
+    name: string;
+    email: string;
+  };
+}
+
+type TransactionData = TransferData | CreateData;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -78,7 +104,7 @@ export async function GET(request: Request) {
       raw: true,
     })) as Buffer;
 
-    // Verify and decode the NFC link
+    // Verify NFC link with decrypted key
     const { itemid } = await EncryptionService.verifyNfcLink(
       key,
       version,
@@ -87,7 +113,10 @@ export async function GET(request: Request) {
 
     // Get item details
     const item = await db.query.items.findFirst({
-      where: eq(items.blockId, itemid),
+      where: eq(items.id, itemid),
+      with: {
+        latestTransaction: true,
+      },
     });
 
     if (!item) {
@@ -109,120 +138,121 @@ export async function GET(request: Request) {
   }
 }
 
-// Verify blockchain integrity by checking the chain of block hashes
+// Verify blockchain integrity by checking the chain of blocks
 async function verifyBlockchain(productId: string) {
-  // Get item and its ownership history
+  // Get item with its latest transaction and associated block
   const item = await db.query.items.findFirst({
     where: eq(items.id, productId),
+    with: {
+      latestTransaction: {
+        with: {
+          block: true,
+        },
+      },
+    },
   });
 
   if (!item) {
     return { isValid: false, error: "Item not found" };
   }
 
-  const history = await db.query.ownershipHistory.findMany({
-    where: eq(ownershipHistory.itemId, productId),
-    orderBy: (history, { asc }) => [asc(history.transferDate)],
-  });
-
-  // Verify genesis block
-  if (item.previousBlockHash !== "0".repeat(64)) {
-    return {
-      isValid: false,
-      error: "Invalid genesis block hash",
-    };
+  if (!item.latestTransaction) {
+    return { isValid: false, error: "No transaction history found" };
   }
 
-  // Convert DB dates back to original form date format (YYYY-MM-DD)
-  const dbPurchaseDate = item.purchaseDate.toISOString();
-  const dbManufactureDate = item.manufactureDate.toISOString();
-
-  // Use just the date portion that matches the original form input
-  const formattedPurchaseDate = dbPurchaseDate.split("T")[0];
-  const formattedManufactureDate = dbManufactureDate.split("T")[0];
-
-  // Verify initial block hash
-  // Match the exact format used in item creation
-  const blockData = {
-    blockId: item.blockId,
-    serialNumber: item.serialNumber,
-    sku: item.sku,
-    mintNumber: item.mintNumber,
-    weight: item.weight,
-    nfcSerialNumber: item.nfcSerialNumber,
-    orderId: item.orderId,
-    currentOwnerName: item.originalOwnerName,
-    currentOwnerEmail: item.originalOwnerEmail,
-    purchaseDate: formattedPurchaseDate,
-    purchasedFrom: item.purchasedFrom,
-    manufactureDate: formattedManufactureDate,
-    producedAt: item.producedAt,
-    timestamp: item.timestamp,
-  };
-
-  // Debug hashing details
-  console.log("Block hash verification:", {
-    storedHash: item.currentBlockHash,
-    computedData: blockData,
-    dates: {
-      dbPurchase: dbPurchaseDate,
-      usedPurchase: formattedPurchaseDate,
-      dbManufacture: dbManufactureDate,
-      usedManufacture: formattedManufactureDate,
-      dbTimestamp: item.timestamp,
-      usedTimestamp: blockData.timestamp,
-      log_dbPurchaseDate: dbPurchaseDate,
-      log_formattedPurchaseDate: formattedPurchaseDate,
-      log_dbManufactureDate: dbManufactureDate,
-      log_formattedManufactureDate: formattedManufactureDate,
-      log_dbTimestamp: item.timestamp,
-      log_blockDataTimestamp: blockData.timestamp,
+  // Get all transactions for this item
+  const itemTransactions = await db.query.transactions.findMany({
+    where: eq(transactions.itemId, productId),
+    with: {
+      block: true,
+      item: true,
     },
+    orderBy: (t, { asc }) => [asc(t.timestamp)],
   });
 
-  const initialBlockHash = crypto
-    .createHash("sha256")
-    .update(JSON.stringify(blockData))
-    .digest("hex");
-
-  console.log("Initial block hash:", initialBlockHash);
-
-  if (item.currentBlockHash !== initialBlockHash) {
-    return {
-      isValid: false,
-      error: "Initial block hash mismatch",
-    };
+  if (itemTransactions.length === 0) {
+    return { isValid: false, error: "No transactions found" };
   }
 
-  // For each ownership transfer, verify the chain of block hashes
-  for (const transfer of history) {
-    // Previous owner's block hash should match current block's previousBlockHash
-    if (transfer.transferDate <= item.modifiedAt) {
-      const transferData = {
-        blockId: item.blockId,
-        serialNumber: item.serialNumber,
-        sku: item.sku,
-        mintNumber: item.mintNumber,
-        weight: item.weight,
-        nfcSerialNumber: item.nfcSerialNumber,
-        orderId: item.orderId,
-        currentOwnerName: transfer.ownerName,
-        currentOwnerEmail: transfer.ownerEmail,
-        timestamp: transfer.transferDate.toISOString(),
+  // Verify each block in the chain
+  for (let i = 0; i < itemTransactions.length; i++) {
+    const transaction = itemTransactions[i];
+    const block = transaction.block;
+
+    if (!block) {
+      return {
+        isValid: false,
+        error: `Block not found for transaction ${transaction.id}`,
       };
+    }
 
-      const expectedBlockHash = crypto
-        .createHash("sha256")
-        .update(JSON.stringify(transferData))
-        .digest("hex");
+    // Verify the block hash
+    const blockData = {
+      blockNumber: block.blockNumber,
+      timestamp: block.timestamp.toISOString(),
+      previousHash: block.previousHash,
+      merkleRoot: block.merkleRoot,
+      nonce: block.nonce,
+    };
 
-      if (expectedBlockHash !== item.previousBlockHash) {
+    const computedBlockHash = crypto
+      .createHash("sha256")
+      .update(JSON.stringify(blockData))
+      .digest("hex");
+
+    if (computedBlockHash !== block.hash) {
+      return {
+        isValid: false,
+        error: `Invalid block hash at block ${block.blockNumber}`,
+      };
+    }
+
+    // Verify transaction hash
+    const computedTransactionHash = crypto
+      .createHash("sha256")
+      .update(JSON.stringify(transaction.data))
+      .digest("hex");
+
+    if (computedTransactionHash !== transaction.hash) {
+      return {
+        isValid: false,
+        error: `Invalid transaction hash at block ${block.blockNumber}`,
+      };
+    }
+
+    // Verify merkle root (simple implementation since we only have one transaction per block)
+    if (computedTransactionHash !== block.merkleRoot) {
+      return {
+        isValid: false,
+        error: `Invalid merkle root at block ${block.blockNumber}`,
+      };
+    }
+
+    // Verify chain link
+    if (i > 0) {
+      const previousBlock = itemTransactions[i - 1].block!;
+      if (block.previousHash !== previousBlock.hash) {
         return {
           isValid: false,
-          error: "Block hash mismatch in ownership history",
+          error: `Broken chain link at block ${block.blockNumber}`,
         };
       }
     }
+  }
+
+  // Verify latest transaction matches item state
+  const latestTransaction = itemTransactions[itemTransactions.length - 1];
+  const transactionData = latestTransaction.data as TransactionData;
+
+  if (
+    transactionData.type === "transfer" &&
+    (transactionData.to.email !== item.currentOwnerEmail ||
+      transactionData.to.name !== item.currentOwnerName)
+  ) {
+    return {
+      isValid: false,
+      error: "Current ownership does not match latest transaction",
+    };
   }
 
   return { isValid: true };

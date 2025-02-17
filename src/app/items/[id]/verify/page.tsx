@@ -8,56 +8,65 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { VerifyForm } from "@/components/verify-form";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ItemVerifyPage() {
   const searchParams = useSearchParams();
+  const params = useParams();
+  const urlItemId = params.id as string;
   const [defaultValues, setDefaultValues] = useState<{
     email?: string;
     serialNumber?: string;
     purchaseDate?: string;
   }>();
   const [isLoading, setIsLoading] = useState(true);
-  const [itemId, setItemId] = useState<string>();
   const [verifyStep, setVerifyStep] = useState<"verify" | "code">("verify");
 
   const key = searchParams.get("key");
   const version = searchParams.get("version");
 
-  // Parse item details from encrypted key
+  // Handle initial loading state and parse encrypted key if present
   useEffect(() => {
     async function fetchItemDetails() {
-      if (key && version) {
-        try {
-          const res = await fetch(
-            `/api/items/verify?key=${key}&version=${version}`,
-            {
-              method: "GET",
-            }
-          );
+      if (!key || !version) {
+        setIsLoading(false);
+        return;
+      }
 
-          if (res.ok) {
-            const data = await res.json();
-            setDefaultValues({
-              email: data.email,
-              serialNumber: data.serialNumber,
-              purchaseDate: new Date(data.purchaseDate)
-                .toISOString()
-                .split("T")[0],
-            });
-            setItemId(data.productId);
+      try {
+        const res = await fetch(
+          `/api/items/verify?key=${key}&version=${version}`,
+          {
+            method: "GET",
           }
-        } catch (err) {
-          console.error("Error fetching item details:", err);
-        } finally {
-          setIsLoading(false);
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          setDefaultValues({
+            email: data.email,
+            serialNumber: data.serialNumber,
+            purchaseDate: new Date(data.purchaseDate)
+              .toISOString()
+              .split("T")[0],
+          });
+          // Keep the URL itemId for verification, but validate it matches the encrypted data
+          if (data.productId !== urlItemId) {
+            console.error("Item ID mismatch between URL and encrypted data");
+            setIsLoading(false);
+            return;
+          }
         }
+      } catch (err) {
+        console.error("Error fetching item details:", err);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     fetchItemDetails();
-  }, [key, version]);
+  }, [key, version, urlItemId]);
 
   if (isLoading) {
     return (
@@ -85,7 +94,7 @@ export default function ItemVerifyPage() {
             defaultValues={defaultValues}
             encryptionKey={key || undefined}
             version={version || undefined}
-            itemId={itemId}
+            itemId={urlItemId}
             onStepChange={setVerifyStep}
           />
         </CardContent>

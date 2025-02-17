@@ -1,6 +1,13 @@
 import { db } from "@/db";
-import { globalEncryptionKeys, items, skus } from "@/db/schema";
+import {
+  blocks,
+  globalEncryptionKeys,
+  items,
+  skus,
+  transactions,
+} from "@/db/schema";
 import { env } from "@/env.mjs";
+import { Block, TransactionData } from "@/lib/blockchain";
 import { EncryptionService } from "@/lib/encryption";
 import crypto from "crypto";
 import { eq } from "drizzle-orm";
@@ -101,82 +108,18 @@ export async function POST(request: Request) {
       }
 
       const encryptedKey = Buffer.from(recentKey.encryptedKey, "base64");
+      const iv = encryptedKey.subarray(0, 12);
+      const authTag = encryptedKey.subarray(encryptedKey.length - 16);
+      const encrypted = encryptedKey.subarray(12, encryptedKey.length - 16);
 
-      console.log("Debug encryption:", {
-        masterKeyLength: masterKey.length,
-        encryptedKeyTotal: encryptedKey.length,
-        version: recentKey.version,
-      });
-
-      try {
-        // Try to parse components and log more details
-        console.log("Raw components:", {
-          ivLength: encryptedKey.subarray(0, 12).length,
-          ivBytes: encryptedKey.subarray(0, 12).toString("hex"),
-          authTagLength: encryptedKey.subarray(12, 28).length,
-          authTagBytes: encryptedKey.subarray(12, 28).toString("hex"),
-          encryptedLength: encryptedKey.subarray(28).length,
-          encryptedBytes: encryptedKey.subarray(28).toString("hex"),
-        });
-
-        // Step 1: Log the full base64 for comparison
-        console.log("Base64 key from DB:", recentKey.encryptedKey);
-        console.log("Base64 decoded length:", encryptedKey.length);
-
-        // Step 2: Extract components [IV (12 bytes) | Encrypted | Auth Tag (16 bytes)]
-        const iv = encryptedKey.subarray(0, 12); // First 12 bytes
-        const encrypted = encryptedKey.subarray(12, encryptedKey.length - 16); // Middle portion
-        const authTag = encryptedKey.subarray(encryptedKey.length - 16); // Last 16 bytes
-
-        // Step 3: Log the full hex of each component for byte-level comparison
-        console.log("Decryption components:", {
-          iv: iv.toString("hex"),
-          encrypted: encrypted.toString("hex"),
-          authTag: authTag.toString("hex"),
-        });
-
-        // Step 4: Verify lengths
-        console.log("Component validation:", {
-          totalLength: encryptedKey.length,
-          expectedTotal: 12 + 32 + 16, // IV + Key + AuthTag
-          ivLength: iv.length,
-          encryptedLength: encrypted.length,
-          authTagLength: authTag.length,
-          encryptedMatches32: encrypted.length === 32,
-        });
-
-        // Decrypt using EncryptionService
-        const decrypted = await EncryptionService.decrypt({
-          encrypted,
-          key: masterKey,
-          iv,
-          authTag,
-          raw: true,
-        });
-        itemKey = decrypted as Buffer;
-
-        console.log("Debug decryption success:", {
-          itemKeyLength: itemKey.length,
-        });
-      } catch (error) {
-        console.error("Debug decryption error:", error);
-        throw error;
-      }
+      itemKey = (await EncryptionService.decrypt({
+        encrypted,
+        key: masterKey,
+        iv,
+        authTag,
+        raw: true,
+      })) as Buffer;
     }
-
-    // Generate blockchain data
-    const blockId = crypto.randomBytes(32).toString("hex");
-    const itemKeyHash = crypto
-      .createHash("sha256")
-      .update(itemKey)
-      .digest("hex");
-
-    // Create NFC link
-    const nfcLink = await EncryptionService.generateNfcLink(
-      blockId,
-      itemKey,
-      globalKeyVersion
-    );
 
     // Find or create SKU and get next mint number
     let sku = await db.query.skus.findFirst({
@@ -204,62 +147,103 @@ export async function POST(request: Request) {
     }
 
     const mintNumber = sku.currentMintNumber.toString().padStart(4, "0");
+    const itemId = crypto.randomUUID();
 
-    const timestamp = new Date();
-    const genesisHash = "0".repeat(64);
-    const blockData = {
-      blockId,
-      serialNumber: parsed.data.serialNumber,
-      sku: parsed.data.sku,
-      mintNumber,
-      weight: parsed.data.weight,
-      nfcSerialNumber: parsed.data.nfcSerialNumber,
-      orderId: parsed.data.orderId,
-      currentOwnerName: parsed.data.originalOwnerName,
-      currentOwnerEmail: parsed.data.originalOwnerEmail,
-      purchaseDate: parsed.data.purchaseDate,
-      purchasedFrom: parsed.data.purchasedFrom,
-      manufactureDate: parsed.data.manufactureDate,
-      producedAt: parsed.data.producedAt,
-      timestamp: timestamp,
-      previousBlockHash: genesisHash, // Include genesis hash in the block data
+    // Generate timestamp once and use its ISO string consistently
+    const timestampISO = new Date().toISOString();
+    const timestamp = new Date(timestampISO); // For DB records
+
+    // Create genesis block for the item
+    const lastBlock = await db.query.blocks.findFirst({
+      orderBy: (blocks, { desc }) => [desc(blocks.blockNumber)],
+    });
+
+    const nextBlockNumber = (lastBlock?.blockNumber ?? 0) + 1;
+
+    // Create transaction data for item creation using the same timestamp
+    const transactionData: TransactionData = {
+      type: "create",
+      itemId,
+      timestamp: timestampISO,
+      data: {
+        to: {
+          name: parsed.data.originalOwnerName,
+          email: parsed.data.originalOwnerEmail,
+        },
+      },
     };
 
-    console.log("Block data:", blockData);
-    console.log(
-      "Block hash:",
-      crypto
-        .createHash("sha256")
-        .update(JSON.stringify(blockData))
-        .digest("hex")
+    // Create new block using the same timestamp
+    const block = new Block(
+      nextBlockNumber,
+      lastBlock?.hash ?? "0".repeat(64),
+      [transactionData],
+      timestampISO
     );
 
-    // Insert item into database
-    await db.insert(items).values({
-      blockId,
-      serialNumber: parsed.data.serialNumber,
-      sku: parsed.data.sku,
-      mintNumber,
-      weight: parsed.data.weight,
-      nfcSerialNumber: parsed.data.nfcSerialNumber,
-      orderId: parsed.data.orderId,
-      originalOwnerName: parsed.data.originalOwnerName,
-      originalOwnerEmail: parsed.data.originalOwnerEmail,
-      currentOwnerName: parsed.data.originalOwnerName,
-      currentOwnerEmail: parsed.data.originalOwnerEmail,
-      purchaseDate: new Date(parsed.data.purchaseDate),
-      purchasedFrom: parsed.data.purchasedFrom,
-      manufactureDate: new Date(parsed.data.manufactureDate),
-      producedAt: parsed.data.producedAt,
-      timestamp: timestamp,
-      currentBlockHash: crypto
-        .createHash("sha256")
-        .update(JSON.stringify(blockData))
-        .digest("hex"),
-      previousBlockHash: "0".repeat(64), // Genesis block
-      itemEncryptionKeyHash: itemKeyHash,
-      globalKeyVersion,
-      nfcLink,
+    const blockHash = block.calculateHash();
+    const merkleRoot = block.getMerkleTree().getRoot();
+
+    // Create NFC link
+    const nfcLink = await EncryptionService.generateNfcLink(
+      itemId,
+      itemKey,
+      globalKeyVersion
+    );
+
+    await db.transaction(async (tx) => {
+      // Create new block
+      const [newBlock] = await tx
+        .insert(blocks)
+        .values({
+          blockNumber: nextBlockNumber,
+          timestamp,
+          previousHash: lastBlock?.hash ?? "0".repeat(64),
+          merkleRoot,
+          nonce: 0,
+          hash: blockHash,
+        })
+        .returning();
+
+      // Create transaction record
+      const [newTransaction] = await tx
+        .insert(transactions)
+        .values({
+          blockId: newBlock.id,
+          transactionType: "create",
+          itemId,
+          data: transactionData,
+          hash: merkleRoot, // Since we only have one transaction per block
+        })
+        .returning();
+
+      // Create item
+      await tx.insert(items).values({
+        id: itemId,
+        serialNumber: parsed.data.serialNumber,
+        sku: parsed.data.sku,
+        mintNumber,
+        weight: parsed.data.weight,
+        nfcSerialNumber: parsed.data.nfcSerialNumber,
+        orderId: parsed.data.orderId,
+        originalOwnerName: parsed.data.originalOwnerName,
+        originalOwnerEmail: parsed.data.originalOwnerEmail,
+        currentOwnerName: parsed.data.originalOwnerName,
+        currentOwnerEmail: parsed.data.originalOwnerEmail,
+        purchaseDate: new Date(parsed.data.purchaseDate),
+        purchasedFrom: parsed.data.purchasedFrom,
+        manufactureDate: new Date(parsed.data.manufactureDate),
+        producedAt: parsed.data.producedAt,
+        timestamp,
+        creationBlockId: newBlock.id,
+        latestTransactionId: newTransaction.id,
+        itemEncryptionKeyHash: crypto
+          .createHash("sha256")
+          .update(itemKey)
+          .digest("hex"),
+        globalKeyVersion,
+        nfcLink,
+      });
     });
 
     return Response.json(

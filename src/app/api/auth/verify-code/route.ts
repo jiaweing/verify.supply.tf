@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     // Parse and validate request
     const body = await req.json();
-    const { email, code } = authCodeSchema.parse(body);
+    const { email, code, itemId } = authCodeSchema.parse(body);
 
     // Find valid auth code
     const now = new Date();
@@ -27,9 +27,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find item associated with email
+    // Find specific item associated with email
     const item = await db.query.items.findFirst({
-      where: eq(items.currentOwnerEmail, email),
+      where: and(eq(items.id, itemId), eq(items.currentOwnerEmail, email)),
     });
 
     if (!item) {

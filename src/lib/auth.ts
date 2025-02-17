@@ -11,6 +11,7 @@ import { env } from "../env.mjs";
 export const authCodeSchema = z.object({
   email: z.string().email(),
   code: z.string().length(6),
+  itemId: z.string().uuid(),
 });
 
 export const loginResponseSchema = z.object({
@@ -67,38 +68,50 @@ export async function validateSession(
   sessionToken: string
 ): Promise<string | null> {
   try {
-    // First verify the JWT token
-    const decoded = jwt.verify(
-      sessionToken,
-      env.SESSION_SECRET
-    ) as SessionJwtPayload;
+    // Step 1: Verify JWT signature and decode token
+    let decoded: SessionJwtPayload;
+    try {
+      decoded = jwt.verify(
+        sessionToken,
+        env.SESSION_SECRET
+      ) as SessionJwtPayload;
+    } catch (error) {
+      console.error("JWT verification failed:", error);
+      return null;
+    }
+
     const itemId = decoded.itemId;
-    console.log(itemId);
+    console.log("JWT decoded itemId:", itemId);
 
-    // find and log
-    const sessionfind = await db.query.sessions.findFirst({
-      where: eq(sessions.sessionToken, sessionToken),
-    });
-    console.log("Session validated:", sessionfind);
-
-    // First check if the session exists
+    // Step 2: Check if session exists and matches decoded itemId
     const session = await db.query.sessions.findFirst({
       where: and(
         eq(sessions.sessionToken, sessionToken),
         eq(sessions.itemId, itemId)
       ),
     });
-    console.log("Session validated:", session);
 
-    // Check if session is expired
+    // Step 3: Validate session
     const now = new Date();
-    if (!session || session.expiresAt < now) {
+    if (!session) {
+      console.error("No matching session found");
+      return null;
+    }
+
+    if (session.expiresAt < now) {
+      console.error("Session expired");
       // Clean up expired sessions
       await db
         .delete(sessions)
         .where(sql`${sessions.expiresAt} < ${sql`NOW()`}`);
       return null;
     }
+
+    console.log("Session validated:", {
+      sessionId: session.id,
+      itemId: session.itemId,
+      expiresAt: session.expiresAt,
+    });
 
     return session.itemId;
   } catch (error) {
