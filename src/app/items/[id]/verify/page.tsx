@@ -47,9 +47,7 @@ export default function ItemVerifyPage() {
           setDefaultValues({
             email: data.email,
             serialNumber: data.serialNumber,
-            purchaseDate: new Date(data.purchaseDate)
-              .toISOString()
-              .split("T")[0],
+            purchaseDate: data.purchaseDate,
           });
           // Keep the URL itemId for verification, but validate it matches the encrypted data
           if (data.productId !== urlItemId) {

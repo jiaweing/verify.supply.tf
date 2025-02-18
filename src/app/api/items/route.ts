@@ -149,8 +149,8 @@ export async function POST(request: Request) {
     const mintNumber = sku.currentMintNumber.toString().padStart(4, "0");
     const itemId = crypto.randomUUID();
 
-    // Generate timestamp once and use its ISO string consistently
-    const timestampISO = new Date().toISOString();
+    // Generate normalized timestamp once to use consistently
+    const timestampISO = now.toISOString().replace(/\.\d+/, ".000");
     const timestamp = new Date(timestampISO); // For DB records
 
     // Create genesis block for the item
@@ -263,6 +263,7 @@ export async function POST(request: Request) {
           .digest("hex"),
         globalKeyVersion,
         nfcLink,
+        createdAt: timestamp, // Use normalized timestamp
       });
     });
 

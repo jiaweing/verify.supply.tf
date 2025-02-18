@@ -51,17 +51,10 @@ export function CreateItemForm() {
       orderId: "",
       originalOwnerName: "",
       originalOwnerEmail: "",
-      purchaseDate: new Date(
-        new Date().getTime() - new Date().getTimezoneOffset() * 60000
-      )
-        .toISOString()
-        .split("T")[0],
+      // Default to today in local time
+      purchaseDate: new Date().toLocaleDateString("en-CA"),
       purchasedFrom: "WEBSITE",
-      manufactureDate: new Date(
-        new Date().getTime() - new Date().getTimezoneOffset() * 60000
-      )
-        .toISOString()
-        .split("T")[0],
+      manufactureDate: new Date().toLocaleDateString("en-CA"),
       producedAt: "SINGAPORE",
     },
   });
@@ -69,16 +62,14 @@ export function CreateItemForm() {
   async function onSubmit(data: ItemFormValues) {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
+      // Convert dates to UTC for API
       if (key === "purchaseDate" || key === "manufactureDate") {
+        // Convert date string to start of day in UTC
         const date = new Date(value);
-        formData.append(
-          key,
-          date.toLocaleDateString("en-US", {
-            month: "2-digit",
-            day: "2-digit",
-            year: "numeric",
-          })
+        const utcDate = new Date(
+          Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
         );
+        formData.append(key, utcDate.toISOString());
       } else {
         formData.append(key, value);
       }

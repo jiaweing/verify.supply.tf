@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
     // Create base conditions
     const conditions = [
       eq(items.serialNumber, serialNumber),
+      // purchaseDate from form is in ISO string format from frontend conversion
       eq(items.originalPurchaseDate, new Date(purchaseDate)),
     ];
 

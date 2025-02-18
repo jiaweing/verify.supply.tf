@@ -6,38 +6,31 @@ import {
   transactions,
 } from "@/db/schema";
 import { createSession } from "@/lib/auth";
+import { Block, TransactionData } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
 import crypto from "crypto";
+
+function stableStringify(obj: unknown): string {
+  if (typeof obj !== "object" || obj === null) {
+    return JSON.stringify(obj);
+  }
+
+  if (Array.isArray(obj)) {
+    return "[" + obj.map(stableStringify).join(",") + "]";
+  }
+
+  const sortedKeys = Object.keys(obj).sort();
+  const items = sortedKeys.map((key) => {
+    const value = (obj as Record<string, unknown>)[key];
+    return `"${key}":${stableStringify(value)}`;
+  });
+  return "{" + items.join(",") + "}";
+}
+
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { env } from "process";
-
-interface TransferData {
-  type: "transfer";
-  itemId: string;
-  timestamp: string;
-  from: {
-    name: string;
-    email: string;
-  };
-  to: {
-    name: string;
-    email: string;
-  };
-}
-
-interface CreateData {
-  type: "create";
-  itemId: string;
-  timestamp: string;
-  owner: {
-    name: string;
-    email: string;
-  };
-}
-
-type TransactionData = TransferData | CreateData;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -124,9 +117,21 @@ export async function GET(request: Request) {
     }
 
     // Get current owner from ownership history or original owner if no transfers
-    const latestTransferData = item.latestTransaction?.data as TransferData;
-    const currentEmail =
-      latestTransferData?.to?.email || item.originalOwnerEmail;
+    const latestTransactionData = item.latestTransaction
+      ?.data as TransactionData;
+    let currentEmail: string;
+    if (latestTransactionData.type === "transfer") {
+      currentEmail = latestTransactionData.data.to.email;
+    } else {
+      currentEmail = latestTransactionData.data.item.originalOwnerEmail;
+    }
+
+    if (currentEmail !== item.originalOwnerEmail) {
+      return {
+        isValid: false,
+        error: "Current ownership does not match latest transaction",
+      };
+    }
 
     return Response.json({
       productId: item.id.toString(),
@@ -191,19 +196,16 @@ async function verifyBlockchain(productId: string) {
       };
     }
 
-    // Verify the block hash
-    const blockData = {
-      blockNumber: block.blockNumber,
-      timestamp: block.timestamp.toISOString(),
-      previousHash: block.previousHash,
-      merkleRoot: block.merkleRoot,
-      nonce: block.nonce,
-    };
+    // Create Block instance for verification using the Block class
+    const blockInstance = new Block(
+      Number(block.blockNumber),
+      block.previousHash,
+      [transaction.data as TransactionData],
+      block.timestamp.toISOString(),
+      Number(block.nonce)
+    );
 
-    const computedBlockHash = crypto
-      .createHash("sha256")
-      .update(JSON.stringify(blockData))
-      .digest("hex");
+    const computedBlockHash = blockInstance.calculateHash();
 
     if (computedBlockHash !== block.hash) {
       return {
@@ -215,7 +217,7 @@ async function verifyBlockchain(productId: string) {
     // Verify transaction hash
     const computedTransactionHash = crypto
       .createHash("sha256")
-      .update(JSON.stringify(transaction.data))
+      .update(stableStringify(transaction.data))
       .digest("hex");
 
     if (computedTransactionHash !== transaction.hash) {
@@ -248,18 +250,14 @@ async function verifyBlockchain(productId: string) {
   // Verify latest transaction matches item state
   const latestTransaction = itemTransactions[itemTransactions.length - 1];
   const transactionData = latestTransaction.data as TransactionData;
-  const latestEmail =
-    transactionData.type === "transfer"
-      ? transactionData.to.email
-      : (transactionData as CreateData).owner.email;
+  let currentEmail: string;
+  if (transactionData.type === "transfer") {
+    currentEmail = transactionData.data.to.email;
+  } else {
+    currentEmail = transactionData.data.item.originalOwnerEmail;
+  }
 
-  const latestTransactionData = latestTransaction.data as TransactionData;
-  const currentEmail =
-    latestTransactionData.type === "transfer"
-      ? (latestTransactionData as TransferData).to.email
-      : item.originalOwnerEmail;
-
-  if (latestEmail !== currentEmail) {
+  if (currentEmail !== item.originalOwnerEmail) {
     return {
       isValid: false,
       error: "Current ownership does not match latest transaction",
@@ -299,10 +297,12 @@ export async function POST(request: Request) {
     // Get current owner from latest transaction or original owner
     const latestTransactionData = item.latestTransaction
       ?.data as TransactionData;
-    const currentEmail =
-      latestTransactionData?.type === "transfer"
-        ? (latestTransactionData as TransferData).to.email
-        : item.originalOwnerEmail;
+    let currentEmail: string;
+    if (latestTransactionData.type === "transfer") {
+      currentEmail = latestTransactionData.data.to.email;
+    } else {
+      currentEmail = latestTransactionData.data.item.originalOwnerEmail;
+    }
 
     // Only allow verification by current owner
     if (currentEmail.toLowerCase() !== email.toLowerCase()) {

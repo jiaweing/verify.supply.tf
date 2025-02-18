@@ -7,6 +7,12 @@ export type DbBlock = InferModel<typeof schema.blocks>;
 export type DbTransaction = InferModel<typeof schema.transactions>;
 export type Database = PostgresJsDatabase<typeof schema>;
 
+function normalizeTimestamp(timestamp: string): string {
+  // Ensure consistent millisecond precision by truncating to 3 decimal places
+  const date = new Date(timestamp);
+  return date.toISOString().replace(/\.\d+/, ".000");
+}
+
 function stableStringify(obj: unknown): string {
   if (typeof obj !== "object" || obj === null) {
     return JSON.stringify(obj);
@@ -16,9 +22,18 @@ function stableStringify(obj: unknown): string {
     return "[" + obj.map(stableStringify).join(",") + "]";
   }
 
+  // Special handling for Date objects
+  if (obj instanceof Date) {
+    return `"${normalizeTimestamp(obj.toISOString())}"`;
+  }
+
   const sortedKeys = Object.keys(obj).sort();
   const items = sortedKeys.map((key) => {
     const value = (obj as Record<string, unknown>)[key];
+    // Handle timestamp strings
+    if (typeof value === "string" && key === "timestamp") {
+      return `"${key}":"${normalizeTimestamp(value)}"`;
+    }
     return `"${key}":${stableStringify(value)}`;
   });
   return "{" + items.join(",") + "}";
@@ -217,7 +232,7 @@ export class Block {
 
     this.data = {
       blockNumber,
-      timestamp,
+      timestamp: normalizeTimestamp(timestamp),
       previousHash,
       merkleRoot: this.merkleTree.getRoot(),
       nonce,
@@ -417,6 +432,110 @@ export async function verifyItemChain(
       latestTxData.data.item.itemEncryptionKeyHash &&
     item.globalKeyVersion === latestTxData.data.item.globalKeyVersion &&
     item.nfcLink === latestTxData.data.item.nfcLink;
+
+  // debug each item match 1 by 1
+  console.log(
+    "item.id",
+    item.id,
+    latestTxData.data.item.id,
+    item.id === latestTxData.data.item.id
+  );
+  console.log(
+    "item.serialNumber",
+    item.serialNumber,
+    latestTxData.data.item.serialNumber,
+    item.serialNumber === latestTxData.data.item.serialNumber
+  );
+  console.log(
+    "item.sku",
+    item.sku,
+    latestTxData.data.item.sku,
+    item.sku === latestTxData.data.item.sku
+  );
+  console.log(
+    "item.mintNumber",
+    item.mintNumber,
+    latestTxData.data.item.mintNumber,
+    item.mintNumber === latestTxData.data.item.mintNumber
+  );
+  console.log(
+    "item.weight",
+    item.weight,
+    latestTxData.data.item.weight,
+    item.weight === latestTxData.data.item.weight
+  );
+  console.log(
+    "item.nfcSerialNumber",
+    item.nfcSerialNumber,
+    latestTxData.data.item.nfcSerialNumber,
+    item.nfcSerialNumber === latestTxData.data.item.nfcSerialNumber
+  );
+  console.log(
+    "item.orderId",
+    item.orderId,
+    latestTxData.data.item.orderId,
+    item.orderId === latestTxData.data.item.orderId
+  );
+  console.log(
+    "item.originalOwnerName",
+    item.originalOwnerName,
+    latestTxData.data.item.originalOwnerName,
+    item.originalOwnerName === latestTxData.data.item.originalOwnerName
+  );
+  console.log(
+    "item.originalOwnerEmail",
+    item.originalOwnerEmail,
+    latestTxData.data.item.originalOwnerEmail,
+    item.originalOwnerEmail === latestTxData.data.item.originalOwnerEmail
+  );
+  console.log(
+    "item.originalPurchaseDate",
+    item.originalPurchaseDate,
+    latestTxData.data.item.originalPurchaseDate,
+    item.originalPurchaseDate === latestTxData.data.item.originalPurchaseDate
+  );
+  console.log(
+    "item.purchasedFrom",
+    item.purchasedFrom,
+    latestTxData.data.item.purchasedFrom,
+    item.purchasedFrom === latestTxData.data.item.purchasedFrom
+  );
+  console.log(
+    "item.manufactureDate",
+    item.manufactureDate,
+    latestTxData.data.item.manufactureDate,
+    item.manufactureDate === latestTxData.data.item.manufactureDate
+  );
+  console.log(
+    "item.producedAt",
+    item.producedAt,
+    latestTxData.data.item.producedAt,
+    item.producedAt === latestTxData.data.item.producedAt
+  );
+  console.log(
+    "item.createdAt",
+    item.createdAt,
+    latestTxData.data.item.createdAt,
+    item.createdAt === latestTxData.data.item.createdAt
+  );
+  console.log(
+    "item.itemEncryptionKeyHash",
+    item.itemEncryptionKeyHash,
+    latestTxData.data.item.itemEncryptionKeyHash,
+    item.itemEncryptionKeyHash === latestTxData.data.item.itemEncryptionKeyHash
+  );
+  console.log(
+    "item.globalKeyVersion",
+    item.globalKeyVersion,
+    latestTxData.data.item.globalKeyVersion,
+    item.globalKeyVersion === latestTxData.data.item.globalKeyVersion
+  );
+  console.log(
+    "item.nfcLink",
+    item.nfcLink,
+    latestTxData.data.item.nfcLink,
+    item.nfcLink === latestTxData.data.item.nfcLink
+  );
 
   if (!itemMatches) {
     return {

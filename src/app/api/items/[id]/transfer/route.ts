@@ -194,8 +194,8 @@ export async function PUT(
       });
 
       const nextBlockNumber = (lastBlock?.blockNumber ?? 0) + 1;
-      // Generate timestamp once and use its ISO string consistently
-      const timestampISO = new Date().toISOString();
+      // Generate normalized timestamp once to use consistently
+      const timestampISO = new Date().toISOString().replace(/\.\d+/, ".000");
       const timestamp = new Date(timestampISO); // For DB
 
       const transactionData: TransactionData = {

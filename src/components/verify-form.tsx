@@ -64,11 +64,9 @@ export function VerifyForm({
     defaultValues: {
       email: defaultValues?.email || "",
       serialNumber: defaultValues?.serialNumber || "",
-      purchaseDate:
-        defaultValues?.purchaseDate ||
-        new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
-          .toISOString()
-          .split("T")[0],
+      purchaseDate: defaultValues?.purchaseDate
+        ? new Date(defaultValues.purchaseDate).toLocaleDateString("en-CA") // Display in local timezone
+        : new Date().toLocaleDateString("en-CA"), // Default to today in local timezone
       code: "", // Always initialize code as empty
       turnstileToken: "",
     },
@@ -137,7 +135,13 @@ export function VerifyForm({
           body: JSON.stringify({
             email: values.email,
             serialNumber: values.serialNumber,
-            purchaseDate: values.purchaseDate,
+            purchaseDate: (() => {
+              // Convert date string to start of day in UTC
+              const date = new Date(values.purchaseDate);
+              return new Date(
+                Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+              ).toISOString();
+            })(),
             key: effectiveKey,
             version: effectiveVersion,
             itemId,
@@ -202,7 +206,13 @@ export function VerifyForm({
         body: JSON.stringify({
           email: verifiedData.email!,
           serialNumber: verifiedData.serialNumber!,
-          purchaseDate: verifiedData.purchaseDate!,
+          purchaseDate: (() => {
+            // Convert date string to start of day in UTC
+            const date = new Date(verifiedData.purchaseDate!);
+            return new Date(
+              Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+            ).toISOString();
+          })(),
           key: effectiveKey,
           version: effectiveVersion,
           itemId,
@@ -380,7 +390,7 @@ export function VerifyForm({
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 className="w-full"
                 onClick={handleResendCode}
                 disabled={!canResend || isSubmitting || isResending}
@@ -391,7 +401,7 @@ export function VerifyForm({
                     Resending...
                   </>
                 ) : canResend ? (
-                  "I did not receive the code"
+                  "Request for another code"
                 ) : (
                   `Resend Code (${resendTimer}s)`
                 )}
