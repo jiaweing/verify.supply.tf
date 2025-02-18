@@ -75,9 +75,12 @@ export function VerifyForm({
   });
 
   const [step, setStep] = React.useState<"verify" | "code">("verify");
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isResending, setIsResending] = React.useState(false);
   const [verifiedData, setVerifiedData] = React.useState<Partial<FormData>>({});
   const [turnstileToken, setTurnstileToken] = React.useState<string>("");
+  const [canResend, setCanResend] = React.useState(false);
+  const [resendTimer, setResendTimer] = React.useState(60);
 
   // Notify parent component of step changes
   React.useEffect(() => {
@@ -91,13 +94,32 @@ export function VerifyForm({
     }
   }, [step, form]);
 
+  // Start timer effect when entering code step
+  React.useEffect(() => {
+    if (step === "code") {
+      setResendTimer(60);
+      setCanResend(false);
+      const timer = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [step]);
+
   async function onSubmit(values: FormData) {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       if (step === "verify") {
         if (!turnstileToken) {
           toast.error("Please complete the CAPTCHA verification");
-          setIsLoading(false);
+          setIsSubmitting(false);
           return;
         }
 
@@ -131,9 +153,7 @@ export function VerifyForm({
         }
 
         toast.success("Check your email for the verification code");
-
         setStep("code");
-        setIsLoading(false);
       } else {
         if (!values.code || values.code.length !== 6) {
           toast.error("Please enter a valid 6-digit code");
@@ -157,7 +177,6 @@ export function VerifyForm({
         }
 
         const data = await res.json();
-        setIsLoading(false);
         if (onSuccess) {
           onSuccess(data);
         } else {
@@ -166,10 +185,55 @@ export function VerifyForm({
         }
       }
     } catch (error) {
-      setIsLoading(false);
       toast.error(
         error instanceof Error ? error.message : "Verification failed"
       );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleResendCode() {
+    try {
+      setIsResending(true);
+      const res = await fetch("/api/auth/request-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: verifiedData.email!,
+          serialNumber: verifiedData.serialNumber!,
+          purchaseDate: verifiedData.purchaseDate!,
+          key: effectiveKey,
+          version: effectiveVersion,
+          itemId,
+          turnstileToken,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to resend code");
+      }
+
+      toast.success("New verification code sent to your email");
+      setCanResend(false);
+      setResendTimer(60);
+      const timer = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to resend code"
+      );
+    } finally {
+      setIsResending(false);
     }
   }
 
@@ -239,9 +303,9 @@ export function VerifyForm({
               type="button"
               className="w-full"
               onClick={form.handleSubmit(onSubmit)}
-              disabled={isLoading}
+              disabled={isSubmitting || isResending}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Verifying...
@@ -298,21 +362,41 @@ export function VerifyForm({
               )}
             />
 
-            <Button
-              type="button"
-              className="w-full"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                "Submit Code"
-              )}
-            </Button>
+            <div className="space-y-1">
+              <Button
+                type="button"
+                className="w-full"
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSubmitting || isResending}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verifying code...
+                  </>
+                ) : (
+                  "Submit Code"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleResendCode}
+                disabled={!canResend || isSubmitting || isResending}
+              >
+                {isResending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Resending...
+                  </>
+                ) : canResend ? (
+                  "Resend Code"
+                ) : (
+                  `Resend Code (${resendTimer}s)`
+                )}
+              </Button>
+            </div>
           </>
         )}
       </div>

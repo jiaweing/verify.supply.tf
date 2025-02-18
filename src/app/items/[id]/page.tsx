@@ -160,19 +160,19 @@ export default async function ItemVerificationPage(props: {
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
               <dt className="font-medium mb-1">Serial Number</dt>
-              <dd className="text-gray-500">{item.serialNumber}</dd>
+              <dd className="text-muted-foreground">{item.serialNumber}</dd>
             </div>
             <div>
               <dt className="font-medium mb-1">SKU</dt>
-              <dd className="text-gray-500">{item.sku}</dd>
+              <dd className="text-muted-foreground">{item.sku}</dd>
             </div>
             <div>
               <dt className="font-medium mb-1">Mint Number</dt>
-              <dd className="text-gray-500">#{item.mintNumber}</dd>
+              <dd className="text-muted-foreground">#{item.mintNumber}</dd>
             </div>
             <div>
               <dt className="font-medium mb-1">Weight</dt>
-              <dd className="text-gray-500">{item.weight}</dd>
+              <dd className="text-muted-foreground">{item.weight}</dd>
             </div>
           </dl>
         </CardContent>
@@ -186,14 +186,14 @@ export default async function ItemVerificationPage(props: {
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
               <dt className="font-medium">Current Owner</dt>
-              <dd className="text-gray-500">
+              <dd className="text-muted-foreground">
                 {getCurrentOwner(item.transactions, item).currentOwnerName} (
                 {getCurrentOwner(item.transactions, item).currentOwnerEmail})
               </dd>
             </div>
             <div>
               <dt className="font-medium">Last Transfer</dt>
-              <dd className="text-gray-500">
+              <dd className="text-muted-foreground">
                 {getCurrentOwner(
                   item.transactions,
                   item
@@ -212,25 +212,29 @@ export default async function ItemVerificationPage(props: {
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
               <dt className="font-medium">Original Owner Name</dt>
-              <dd className="text-gray-500">{item.originalOwnerName}</dd>
+              <dd className="text-muted-foreground">
+                {item.originalOwnerName}
+              </dd>
             </div>
             <div>
               <dt className="font-medium">Original Owner Email</dt>
-              <dd className="text-gray-500">{item.originalOwnerEmail}</dd>
+              <dd className="text-muted-foreground">
+                {item.originalOwnerEmail}
+              </dd>
             </div>
             <div>
               <dt className="font-medium">Manufacture Date</dt>
-              <dd className="text-gray-500">
+              <dd className="text-muted-foreground">
                 {item.manufactureDate.toLocaleDateString()}
               </dd>
             </div>
             <div>
               <dt className="font-medium">Produced At</dt>
-              <dd className="text-gray-500">{item.producedAt}</dd>
+              <dd className="text-muted-foreground">{item.producedAt}</dd>
             </div>
             <div>
               <dt className="font-medium">Purchased From</dt>
-              <dd className="text-gray-500">{item.purchasedFrom}</dd>
+              <dd className="text-muted-foreground">{item.purchasedFrom}</dd>
             </div>
           </dl>
         </CardContent>
@@ -262,7 +266,7 @@ export default async function ItemVerificationPage(props: {
                       <h4 className="font-semibold text-green-600 flex items-center">
                         <Verified className="h-4 w-4 mr-1" /> Valid Chain
                       </h4>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         The blockchain hash chain is valid and has not been
                         tampered with.
                       </p>
@@ -272,7 +276,7 @@ export default async function ItemVerificationPage(props: {
                       <h4 className="font-semibold text-red-600 flex items-center">
                         <X className="h-4 w-4 mr-1" /> Invalid Chain
                       </h4>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         {chainVerification.error ? (
                           chainVerification.error.includes(
                             "Item data does not match"
@@ -307,16 +311,16 @@ export default async function ItemVerificationPage(props: {
                   <h4 className="font-medium mb-2 flex flex-row items-center gap-2">
                     Hash Comparison
                     <div className="text-xs font-mono break-all text-muted-foreground">
-                      ({new Date().toISOString()})
+                      (generated at {new Date().toISOString()})
                     </div>
                   </h4>
                   <div className="space-y-4">
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 bg-muted rounded-lg">
                       <div className="mb-1">
-                        <span className="text-sm font-medium text-gray-500">
+                        <span className="text-sm font-medium text-muted-foreground">
                           Creation Block
                         </span>
-                        <span className="ml-2 text-xs text-gray-400">
+                        <span className="ml-2 text-xs text-muted-foreground">
                           (Original)
                         </span>
                       </div>
@@ -325,15 +329,15 @@ export default async function ItemVerificationPage(props: {
                       </div>
                     </div>
                     <div className="flex items-center justify-center relative">
-                      <Chain className="text-muted-foreground p-1 absolute bg-background" />
+                      <Chain className="text-muted-foreground py-1.5 absolute bg-background" />
                       <div className="w-px h-20 bg-muted" />
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 bg-muted rounded-lg">
                       <div className="mb-1">
-                        <span className="text-sm font-medium text-gray-500">
+                        <span className="text-sm font-medium text-muted-foreground">
                           Latest Block
                         </span>
-                        <span className="ml-2 text-xs text-gray-400">
+                        <span className="ml-2 text-xs text-muted-foreground">
                           (Current)
                         </span>
                       </div>
@@ -351,13 +355,13 @@ export default async function ItemVerificationPage(props: {
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
               <dt className="font-medium">Created At</dt>
-              <dd className="text-gray-500">
+              <dd className="text-muted-foreground">
                 {item.createdAt.toLocaleString()}
               </dd>
             </div>
             <div>
               <dt className="font-medium">Transfer Count</dt>
-              <dd className="text-gray-500">
+              <dd className="text-muted-foreground">
                 {getCurrentOwner(item.transactions, item).transferCount}
               </dd>
             </div>
@@ -387,13 +391,13 @@ export default async function ItemVerificationPage(props: {
                 <tbody>
                   {(item.ownershipHistory ?? []).map((history) => (
                     <tr key={history.id}>
-                      <td className="px-4 py-2 text-gray-500">
+                      <td className="px-4 py-2 text-muted-foreground">
                         {history.newOwnerName}
                       </td>
-                      <td className="px-4 py-2 text-gray-500">
+                      <td className="px-4 py-2 text-muted-foreground">
                         {history.newOwnerEmail}
                       </td>
-                      <td className="px-4 py-2 text-gray-500">
+                      <td className="px-4 py-2 text-muted-foreground">
                         {history.createdAt.toLocaleString()}
                       </td>
                     </tr>
@@ -402,7 +406,7 @@ export default async function ItemVerificationPage(props: {
                     <tr>
                       <td
                         colSpan={3}
-                        className="text-center text-gray-500 px-4 py-2"
+                        className="text-center text-muted-foreground px-4 py-2"
                       >
                         No ownership transfers yet
                       </td>

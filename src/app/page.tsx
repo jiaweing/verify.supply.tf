@@ -23,7 +23,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="space-y-4 w-[400px]">
         <VerifyCard />
 

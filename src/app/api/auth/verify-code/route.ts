@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { authCodes, items } from "@/db/schema";
+import { authCodes, items, ownershipTransfers } from "@/db/schema";
 import { authCodeSchema, createSession } from "@/lib/auth";
 import { and, eq, gt } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -27,12 +27,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find specific item associated with email
+    // Find specific item and its latest ownership transfer
     const item = await db.query.items.findFirst({
-      where: and(eq(items.id, itemId), eq(items.currentOwnerEmail, email)),
+      where: eq(items.id, itemId),
     });
 
     if (!item) {
+      return Response.json({ error: "Item not found" }, { status: 404 });
+    }
+
+    // Get latest ownership transfer if any
+    const latestTransfer = await db.query.ownershipTransfers.findFirst({
+      where: eq(ownershipTransfers.itemId, itemId),
+      orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
+    });
+
+    // Check if user is the original owner or current owner through transfer
+    const isOriginalOwner = item.originalOwnerEmail === email;
+    const isCurrentOwner = latestTransfer?.currentOwnerEmail === email;
+
+    if (!isOriginalOwner && !isCurrentOwner) {
       return Response.json(
         { error: "No item found with this email" },
         { status: 404 }

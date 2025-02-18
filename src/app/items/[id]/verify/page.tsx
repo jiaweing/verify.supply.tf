@@ -71,13 +71,13 @@ export default function ItemVerifyPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center bg-gray-100 min-h-screen">
+    <div className="flex items-center justify-center bg-background min-h-screen">
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>

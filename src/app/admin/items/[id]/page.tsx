@@ -80,27 +80,29 @@ export default async function ItemPage(props: {
             <dl className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="font-medium">Serial Number</dt>
-                <dd className="text-gray-500">{item.serialNumber}</dd>
+                <dd className="text-muted-foreground">{item.serialNumber}</dd>
               </div>
               <div>
                 <dt className="font-medium">SKU</dt>
-                <dd className="text-gray-500">{item.sku}</dd>
+                <dd className="text-muted-foreground">{item.sku}</dd>
               </div>
               <div>
                 <dt className="font-medium">Mint Number</dt>
-                <dd className="text-gray-500">#{item.mintNumber}</dd>
+                <dd className="text-muted-foreground">#{item.mintNumber}</dd>
               </div>
               <div>
                 <dt className="font-medium">Weight</dt>
-                <dd className="text-gray-500">{item.weight}</dd>
+                <dd className="text-muted-foreground">{item.weight}</dd>
               </div>
               <div>
                 <dt className="font-medium">NFC Serial Number</dt>
-                <dd className="text-gray-500">{item.nfcSerialNumber}</dd>
+                <dd className="text-muted-foreground">
+                  {item.nfcSerialNumber}
+                </dd>
               </div>
               <div>
                 <dt className="font-medium">Order ID</dt>
-                <dd className="text-gray-500">{item.orderId}</dd>
+                <dd className="text-muted-foreground">{item.orderId}</dd>
               </div>
             </dl>
           </CardContent>
@@ -118,31 +120,35 @@ export default async function ItemPage(props: {
             <dl className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="font-medium">Original Owner Name</dt>
-                <dd className="text-gray-500">{item.originalOwnerName}</dd>
+                <dd className="text-muted-foreground">
+                  {item.originalOwnerName}
+                </dd>
               </div>
               <div>
                 <dt className="font-medium">Original Owner Email</dt>
-                <dd className="text-gray-500">{item.originalOwnerEmail}</dd>
+                <dd className="text-muted-foreground">
+                  {item.originalOwnerEmail}
+                </dd>
               </div>
               <div>
                 <dt className="font-medium">Purchase Date</dt>
-                <dd className="text-gray-500">
+                <dd className="text-muted-foreground">
                   {item.originalPurchaseDate.toLocaleDateString()}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Purchased From</dt>
-                <dd className="text-gray-500">{item.purchasedFrom}</dd>
+                <dd className="text-muted-foreground">{item.purchasedFrom}</dd>
               </div>
               <div>
                 <dt className="font-medium">Manufacture Date</dt>
-                <dd className="text-gray-500">
+                <dd className="text-muted-foreground">
                   {item.manufactureDate.toLocaleDateString()}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Produced At</dt>
-                <dd className="text-gray-500">{item.producedAt}</dd>
+                <dd className="text-muted-foreground">{item.producedAt}</dd>
               </div>
             </dl>
           </CardContent>
@@ -158,25 +164,25 @@ export default async function ItemPage(props: {
             <dl className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="font-medium">Creation Block Hash</dt>
-                <dd className="text-gray-500 font-mono text-sm break-all">
+                <dd className="text-muted-foreground font-mono text-sm break-all">
                   {item.creationBlock?.hash}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Latest Block Hash</dt>
-                <dd className="text-gray-500 font-mono text-sm break-all">
+                <dd className="text-muted-foreground font-mono text-sm break-all">
                   {item.latestTransaction?.block?.hash}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Previous Block Hash</dt>
-                <dd className="text-gray-500 font-mono text-sm break-all">
+                <dd className="text-muted-foreground font-mono text-sm break-all">
                   {item.latestTransaction?.block?.previousHash}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Created At</dt>
-                <dd className="text-gray-500">
+                <dd className="text-muted-foreground">
                   {item.createdAt.toLocaleString()}
                 </dd>
               </div>
@@ -194,19 +200,19 @@ export default async function ItemPage(props: {
             <dl className="grid grid-cols-1 gap-4">
               <div>
                 <dt className="font-medium">Link</dt>
-                <dd className="text-gray-500 font-mono text-sm break-all mt-1">
+                <dd className="text-muted-foreground font-mono text-sm break-all mt-1">
                   {item.nfcLink}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Item Encryption Key Hash</dt>
-                <dd className="text-gray-500 font-mono text-sm break-all mt-1">
+                <dd className="text-muted-foreground font-mono text-sm break-all mt-1">
                   {item.itemEncryptionKeyHash}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium">Global Key Version</dt>
-                <dd className="text-gray-500 font-mono text-sm mt-1">
+                <dd className="text-muted-foreground font-mono text-sm mt-1">
                   {item.globalKeyVersion}
                 </dd>
               </div>
@@ -244,13 +250,13 @@ export default async function ItemPage(props: {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell className="text-gray-500">
+                    <TableCell className="text-muted-foreground">
                       {item.originalOwnerName}
                     </TableCell>
-                    <TableCell className="text-gray-500">
+                    <TableCell className="text-muted-foreground">
                       {item.originalOwnerEmail}
                     </TableCell>
-                    <TableCell className="text-gray-500">
+                    <TableCell className="text-muted-foreground">
                       {item.createdAt.toLocaleString()}
                     </TableCell>
                   </TableRow>
