@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect } from "react";
 
-type Theme = "dark" | "light";
+type Theme = "dark" | "light" | "system";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -35,14 +35,49 @@ export function ThemeProvider({
     root.classList.add(theme);
   }, [theme]);
 
+  // Initialize theme from localStorage or system preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") as Theme | null;
+
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("system");
+    }
+  }, []);
+
+  // Watch for system theme changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleChange = () => {
+      if (theme === "system") {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(
+          mediaQuery.matches ? "dark" : "light"
+        );
+      }
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    if (theme === "system") handleChange();
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [theme]);
+
   const value = {
     theme,
     setTheme: (theme: Theme) => {
       setTheme(theme);
-      try {
-        localStorage.setItem("theme", theme);
-      } catch {
-        // Ignore write errors
+      if (theme === "system") {
+        // Remove any stored theme to default to system preference
+        localStorage.removeItem("theme");
+      } else {
+        try {
+          localStorage.setItem("theme", theme);
+        } catch {
+          // Ignore write errors
+        }
       }
     },
   };
