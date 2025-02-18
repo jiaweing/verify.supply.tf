@@ -1,3 +1,5 @@
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { initializeAdmin } from "@/lib/auth";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -30,10 +32,17 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <Toaster position="top-center" />
+        <ThemeProvider defaultTheme="dark">
+          <div className="min-h-screen bg-background">
+            {children}
+            <div className="fixed bottom-4 right-4">
+              <ThemeToggle />
+            </div>
+          </div>
+          <Toaster position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

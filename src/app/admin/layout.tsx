@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
             </nav>
           </div>
           <Toaster richColors position="top-center" />
-          <div className="flex flex-1 items-center justify-end">
+          <div className="flex flex-1 items-center justify-end space-x-4">
             <AdminLogoutButton />
           </div>
         </div>
