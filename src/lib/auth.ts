@@ -49,13 +49,11 @@ export async function createSession(itemId: string): Promise<{
       Date.now() + env.SESSION_EXPIRY_MINUTES * 60 * 1000
     );
 
-    const result = await db.insert(sessions).values({
+    await db.insert(sessions).values({
       itemId,
       sessionToken,
       expiresAt,
     });
-    console.log("Session created:", { itemId, sessionToken, expiresAt });
-    console.log("Result:", result);
 
     return { sessionToken, expiresAt };
   } catch (error) {
@@ -81,7 +79,6 @@ export async function validateSession(
     }
 
     const itemId = decoded.itemId;
-    console.log("JWT decoded itemId:", itemId);
 
     // Step 2: Check if session exists and matches decoded itemId
     const session = await db.query.sessions.findFirst({
@@ -106,12 +103,6 @@ export async function validateSession(
         .where(sql`${sessions.expiresAt} < ${sql`NOW()`}`);
       return null;
     }
-
-    console.log("Session validated:", {
-      sessionId: session.id,
-      itemId: session.itemId,
-      expiresAt: session.expiresAt,
-    });
 
     return session.itemId;
   } catch (error) {

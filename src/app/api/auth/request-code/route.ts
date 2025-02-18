@@ -1,20 +1,12 @@
 import { db } from "@/db";
-import { authCodes, items } from "@/db/schema";
+import { authCodes, globalEncryptionKeys, items } from "@/db/schema";
 import { generateAuthCode } from "@/lib/auth";
+import { getCurrentOwner } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
+import { EncryptionService } from "@/lib/encryption";
 import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-
-interface TransferData {
-  type: "transfer";
-  itemId: string;
-  timestamp: string;
-  to: {
-    name: string;
-    email: string;
-  };
-}
 
 const requestCodeSchema = z.object({
   email: z.string().email(),
@@ -56,21 +48,81 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("email: ", email);
-    console.log("serialNumber: ", serialNumber);
-    console.log("purchaseDate: ", purchaseDate);
-    console.log("key: ", key);
-    console.log("version: ", version);
+    // If key and version provided, verify NFC link first
+    let itemId: string | undefined = undefined;
+    if (key && version) {
+      // Get the encryption key
+      const globalKey = await db.query.globalEncryptionKeys.findFirst({
+        where: eq(globalEncryptionKeys.version, version),
+      });
 
-    // Create base conditions
-    const conditions = [
-      eq(items.serialNumber, serialNumber),
-      // purchaseDate from form is in ISO string format from frontend conversion
-      eq(items.originalPurchaseDate, new Date(purchaseDate)),
-    ];
+      if (!globalKey) {
+        return Response.json(
+          { error: "Please use the most recent NFC link" },
+          { status: 400 }
+        );
+      }
+
+      if (globalKey.activeTo < new Date()) {
+        return Response.json(
+          { error: "Expired key version. Please scan again." },
+          { status: 400 }
+        );
+      }
+
+      // Decrypt the encryption key
+      const masterKeyHex = process.env.MASTER_KEY!.replace(/[^0-9a-f]/gi, "");
+      const masterKey = Buffer.from(masterKeyHex, "hex");
+
+      if (masterKey.length !== 32) {
+        throw new Error("MASTER_KEY must be a 32-byte hex string");
+      }
+
+      try {
+        // First decrypt the item key
+        const encryptedItemKey = Buffer.from(globalKey.encryptedKey, "base64");
+        const keyIV = encryptedItemKey.subarray(0, 12);
+        const keyAuthTag = encryptedItemKey.subarray(
+          encryptedItemKey.length - 16
+        );
+        const keyEncrypted = encryptedItemKey.subarray(
+          12,
+          encryptedItemKey.length - 16
+        );
+
+        // Get the item key using master key
+        const itemKey = (await EncryptionService.decrypt({
+          encrypted: keyEncrypted,
+          key: masterKey,
+          iv: keyIV,
+          authTag: keyAuthTag,
+          raw: true,
+        })) as Buffer;
+
+        // Then verify the NFC link which is already in correct format for verifyNfcLink
+        const verifiedData = await EncryptionService.verifyNfcLink(
+          key,
+          version,
+          itemKey
+        );
+        itemId = verifiedData.itemId;
+      } catch {
+        return Response.json(
+          { error: "Invalid verification key" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create base conditions for item query
+    const conditions = [eq(items.serialNumber, serialNumber)];
 
     if (version) {
       conditions.push(eq(items.globalKeyVersion, version));
+    }
+
+    if (itemId) {
+      conditions.push(eq(items.id, itemId));
     }
 
     // Check if item exists with all conditions
@@ -78,6 +130,11 @@ export async function POST(req: NextRequest) {
       where: and(...conditions),
       with: {
         latestTransaction: true,
+        transactions: {
+          with: {
+            block: true,
+          },
+        },
       },
     });
 
@@ -88,16 +145,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get current owner from latest transaction or original owner
-    const currentEmail = item.latestTransaction?.data
-      ? (item.latestTransaction.data as TransferData).to?.email ||
-        item.originalOwnerEmail
-      : item.originalOwnerEmail;
+    // Get current owner info including latest transfer date
+    const currentOwner = getCurrentOwner(item.transactions, item);
 
-    // Verify email matches current owner
-    if (currentEmail.toLowerCase() !== email.toLowerCase()) {
+    // Check both email and purchase date
+    if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
       return Response.json(
         { error: "Email does not match current owner" },
+        { status: 403 }
+      );
+    }
+
+    // Verify purchase date matches
+    const lastTransferDate = new Date(currentOwner.lastTransferDate)
+      .toISOString()
+      .split("T")[0];
+    const submittedDate = new Date(purchaseDate).toISOString().split("T")[0];
+
+    if (lastTransferDate !== submittedDate) {
+      return Response.json(
+        { error: "Purchase date does not match transfer date" },
         { status: 403 }
       );
     }

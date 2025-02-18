@@ -27,24 +27,11 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
         const sessionRes = await fetch("/api/session");
         const sessionData = await sessionRes.json();
 
-        console.log("Session Response:", {
-          status: sessionRes.status,
-          ok: sessionRes.ok,
-          data: sessionData,
-        });
-
         // Verify the NFC tag
         const verifyRes = await fetch(
           `/api/items/verify?key=${key}&version=${version}`
         );
         const verifyData = await verifyRes.json();
-
-        console.log("Verify Response:", {
-          status: verifyRes.status,
-          ok: verifyRes.ok,
-          data: verifyData,
-        });
-
         if (!verifyRes.ok) {
           setIsInvalid(true);
           toast.error("This link is invalid");

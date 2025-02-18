@@ -93,11 +93,17 @@ export class EncryptionService {
   }
 
   static async generateNfcLink(
-    itemid: string,
+    itemId: string,
+    serialNumber: string,
+    nfcSerialNumber: string,
     itemKey: Buffer,
     globalKeyVersion: string
   ): Promise<string> {
-    const data = JSON.stringify({ itemid, timestamp: Date.now() });
+    const data = JSON.stringify({
+      itemId,
+      serialNumber,
+      nfcSerialNumber,
+    });
     const { encrypted, iv, authTag } = await this.encrypt(data, itemKey);
 
     const linkData = Buffer.concat([encrypted, iv, authTag]).toString(
@@ -110,7 +116,11 @@ export class EncryptionService {
     key: string,
     version: string,
     itemKey: Buffer
-  ): Promise<{ itemid: string; timestamp: number }> {
+  ): Promise<{
+    itemId: string;
+    serialNumber: string;
+    nfcSerialNumber: string;
+  }> {
     const buffer = Buffer.from(key, "base64url");
 
     // Extract components from buffer
@@ -130,7 +140,7 @@ export class EncryptionService {
       iv,
       authTag,
     });
-    // NFC link data is always string data, so we know it will return string
+
     return JSON.parse(decrypted as string);
   }
 

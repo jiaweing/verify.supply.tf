@@ -1,5 +1,4 @@
 import * as schema from "@/db/schema";
-import { env } from "@/env.mjs";
 import { createHash } from "crypto";
 import { asc, eq, type InferModel } from "drizzle-orm";
 import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -355,20 +354,6 @@ export async function verifyItemChain(
 
     // Verify block hash
     const computedHash = blockInstance.calculateHash();
-    // Log with detailed timestamp info for debugging
-    console.log(`Block ${block.blockNumber} verification:`, {
-      storedHash: block.hash,
-      computedHash,
-      blockData: blockInstance.getData(),
-      nonce: block.nonce,
-      storedTimestamp: block.timestamp.toISOString(),
-      blockDataTimestamp: blockInstance.getData().timestamp,
-      storedTimestampMs: block.timestamp.getTime(),
-      blockDataTimestampMs: new Date(
-        blockInstance.getData().timestamp
-      ).getTime(),
-    });
-
     if (computedHash !== block.hash) {
       return {
         isValid: false,
@@ -432,110 +417,6 @@ export async function verifyItemChain(
     item.blockchainVersion === latestTxData.data.item.blockchainVersion &&
     item.globalKeyVersion === latestTxData.data.item.globalKeyVersion &&
     item.nfcLink === latestTxData.data.item.nfcLink;
-
-  // debug each item match 1 by 1
-  console.log(
-    "item.id",
-    item.id,
-    latestTxData.data.item.id,
-    item.id === latestTxData.data.item.id
-  );
-  console.log(
-    "item.serialNumber",
-    item.serialNumber,
-    latestTxData.data.item.serialNumber,
-    item.serialNumber === latestTxData.data.item.serialNumber
-  );
-  console.log(
-    "item.sku",
-    item.sku,
-    latestTxData.data.item.sku,
-    item.sku === latestTxData.data.item.sku
-  );
-  console.log(
-    "item.mintNumber",
-    item.mintNumber,
-    latestTxData.data.item.mintNumber,
-    item.mintNumber === latestTxData.data.item.mintNumber
-  );
-  console.log(
-    "item.weight",
-    item.weight,
-    latestTxData.data.item.weight,
-    item.weight === latestTxData.data.item.weight
-  );
-  console.log(
-    "item.nfcSerialNumber",
-    item.nfcSerialNumber,
-    latestTxData.data.item.nfcSerialNumber,
-    item.nfcSerialNumber === latestTxData.data.item.nfcSerialNumber
-  );
-  console.log(
-    "item.orderId",
-    item.orderId,
-    latestTxData.data.item.orderId,
-    item.orderId === latestTxData.data.item.orderId
-  );
-  console.log(
-    "item.originalOwnerName",
-    item.originalOwnerName,
-    latestTxData.data.item.originalOwnerName,
-    item.originalOwnerName === latestTxData.data.item.originalOwnerName
-  );
-  console.log(
-    "item.originalOwnerEmail",
-    item.originalOwnerEmail,
-    latestTxData.data.item.originalOwnerEmail,
-    item.originalOwnerEmail === latestTxData.data.item.originalOwnerEmail
-  );
-  console.log(
-    "item.originalPurchaseDate",
-    item.originalPurchaseDate,
-    latestTxData.data.item.originalPurchaseDate,
-    item.originalPurchaseDate === latestTxData.data.item.originalPurchaseDate
-  );
-  console.log(
-    "item.purchasedFrom",
-    item.purchasedFrom,
-    latestTxData.data.item.purchasedFrom,
-    item.purchasedFrom === latestTxData.data.item.purchasedFrom
-  );
-  console.log(
-    "item.manufactureDate",
-    item.manufactureDate,
-    latestTxData.data.item.manufactureDate,
-    item.manufactureDate === latestTxData.data.item.manufactureDate
-  );
-  console.log(
-    "item.producedAt",
-    item.producedAt,
-    latestTxData.data.item.producedAt,
-    item.producedAt === latestTxData.data.item.producedAt
-  );
-  console.log(
-    "item.createdAt",
-    item.createdAt,
-    latestTxData.data.item.createdAt,
-    item.createdAt === latestTxData.data.item.createdAt
-  );
-  console.log(
-    "item.blockchainVersion",
-    item.blockchainVersion,
-    latestTxData.data.item.blockchainVersion,
-    env.BLOCKCHAIN_VERSION === latestTxData.data.item.blockchainVersion
-  );
-  console.log(
-    "item.globalKeyVersion",
-    item.globalKeyVersion,
-    latestTxData.data.item.globalKeyVersion,
-    item.globalKeyVersion === latestTxData.data.item.globalKeyVersion
-  );
-  console.log(
-    "item.nfcLink",
-    item.nfcLink,
-    latestTxData.data.item.nfcLink,
-    item.nfcLink === latestTxData.data.item.nfcLink
-  );
 
   if (!itemMatches) {
     return {

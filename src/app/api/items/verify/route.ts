@@ -6,7 +6,7 @@ import {
   transactions,
 } from "@/db/schema";
 import { createSession } from "@/lib/auth";
-import { Block, TransactionData } from "@/lib/blockchain";
+import { Block, TransactionData, getCurrentOwner } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
 import crypto from "crypto";
@@ -84,31 +84,46 @@ export async function GET(request: Request) {
       throw new Error("MASTER_KEY must be a 32-byte hex string");
     }
 
-    const encryptedKey = Buffer.from(globalKey.encryptedKey, "base64");
-    const iv = encryptedKey.subarray(0, 12);
-    const authTag = encryptedKey.subarray(encryptedKey.length - 16);
-    const encrypted = encryptedKey.subarray(12, encryptedKey.length - 16);
+    // First decrypt the item key
+    const encryptedItemKey = Buffer.from(globalKey.encryptedKey, "base64");
+    const keyIV = encryptedItemKey.subarray(0, 12);
+    const keyAuthTag = encryptedItemKey.subarray(encryptedItemKey.length - 16);
+    const keyEncrypted = encryptedItemKey.subarray(
+      12,
+      encryptedItemKey.length - 16
+    );
 
+    // Get the item key using master key
     const itemKey = (await EncryptionService.decrypt({
-      encrypted,
+      encrypted: keyEncrypted,
       key: masterKey,
-      iv,
-      authTag,
+      iv: keyIV,
+      authTag: keyAuthTag,
       raw: true,
     })) as Buffer;
 
-    // Verify NFC link with decrypted key
-    const { itemid } = await EncryptionService.verifyNfcLink(
+    // Then verify the NFC link which is already in the correct base64url format
+    const verifiedData = await EncryptionService.verifyNfcLink(
       key,
       version,
       itemKey
     );
 
-    // Get item details
+    // Get item details and verify all fields match
     const item = await db.query.items.findFirst({
-      where: eq(items.id, itemid),
+      where: (items, { and, eq }) =>
+        and(
+          eq(items.id, verifiedData.itemId),
+          eq(items.serialNumber, verifiedData.serialNumber),
+          eq(items.nfcSerialNumber, verifiedData.nfcSerialNumber)
+        ),
       with: {
         latestTransaction: true,
+        transactions: {
+          with: {
+            block: true,
+          },
+        },
       },
     });
 
@@ -116,28 +131,14 @@ export async function GET(request: Request) {
       return Response.json({ error: "Item not found" }, { status: 404 });
     }
 
-    // Get current owner from ownership history or original owner if no transfers
-    const latestTransactionData = item.latestTransaction
-      ?.data as TransactionData;
-    let currentEmail: string;
-    if (latestTransactionData.type === "transfer") {
-      currentEmail = latestTransactionData.data.to.email;
-    } else {
-      currentEmail = latestTransactionData.data.item.originalOwnerEmail;
-    }
-
-    if (currentEmail !== item.originalOwnerEmail) {
-      return {
-        isValid: false,
-        error: "Current ownership does not match latest transaction",
-      };
-    }
+    // Get current owner info including latest transfer date
+    const currentOwner = getCurrentOwner(item.transactions, item);
 
     return Response.json({
       productId: item.id.toString(),
-      email: currentEmail,
+      email: currentOwner.currentOwnerEmail,
       serialNumber: item.serialNumber,
-      purchaseDate: item.originalPurchaseDate,
+      purchaseDate: currentOwner.lastTransferDate,
     });
   } catch (err) {
     console.error("Error verifying NFC link:", err);
@@ -247,23 +248,6 @@ async function verifyBlockchain(productId: string) {
     }
   }
 
-  // Verify latest transaction matches item state
-  const latestTransaction = itemTransactions[itemTransactions.length - 1];
-  const transactionData = latestTransaction.data as TransactionData;
-  let currentEmail: string;
-  if (transactionData.type === "transfer") {
-    currentEmail = transactionData.data.to.email;
-  } else {
-    currentEmail = transactionData.data.item.originalOwnerEmail;
-  }
-
-  if (currentEmail !== item.originalOwnerEmail) {
-    return {
-      isValid: false,
-      error: "Current ownership does not match latest transaction",
-    };
-  }
-
   return { isValid: true };
 }
 
@@ -287,6 +271,11 @@ export async function POST(request: Request) {
       where: (items, { eq }) => eq(items.id, productId),
       with: {
         latestTransaction: true,
+        transactions: {
+          with: {
+            block: true,
+          },
+        },
       },
     });
 
@@ -294,18 +283,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "Item not found" }, { status: 404 });
     }
 
-    // Get current owner from latest transaction or original owner
-    const latestTransactionData = item.latestTransaction
-      ?.data as TransactionData;
-    let currentEmail: string;
-    if (latestTransactionData.type === "transfer") {
-      currentEmail = latestTransactionData.data.to.email;
-    } else {
-      currentEmail = latestTransactionData.data.item.originalOwnerEmail;
-    }
+    // Get current owner info
+    const currentOwner = getCurrentOwner(item.transactions, item);
 
     // Only allow verification by current owner
-    if (currentEmail.toLowerCase() !== email.toLowerCase()) {
+    if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
       return Response.json(
         { error: "Email does not match current owner" },
         { status: 403 }

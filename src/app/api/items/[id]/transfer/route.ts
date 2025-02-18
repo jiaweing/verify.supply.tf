@@ -10,6 +10,7 @@ import {
 } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { eq } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
 const TRANSFER_EXPIRY_HOURS = env.OWNERSHIP_TRANSFER_EXPIRY_HOURS
@@ -22,28 +23,33 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    // Validate session
-    const sessionToken = request.headers.get("authorization")?.split(" ")[1];
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("session_token")?.value;
+
     if (!sessionToken) {
       return Response.json(
-        { error: "Authentication required" },
+        { error: "No session token found" },
         { status: 401 }
       );
     }
 
-    const itemId = await validateSession(sessionToken);
-    if (!itemId || itemId !== params.id) {
+    const authenticatedItemId = await validateSession(sessionToken);
+    if (!authenticatedItemId) {
       return Response.json(
         { error: "Invalid or expired session" },
         { status: 401 }
       );
     }
 
+    if (authenticatedItemId !== params.id) {
+      return Response.json({ error: "Unauthorized access" }, { status: 403 });
+    }
+
     const { newOwnerEmail, newOwnerName } = await request.json();
 
     // Get full item details and transaction history
     const item = await db.query.items.findFirst({
-      where: eq(items.id, itemId),
+      where: eq(items.id, authenticatedItemId),
     });
 
     if (!item) {
@@ -51,7 +57,7 @@ export async function POST(
     }
 
     // Get current ownership info from transaction history
-    const txHistory = await getItemTransactionHistory(db, itemId);
+    const txHistory = await getItemTransactionHistory(db, authenticatedItemId);
     const currentOwnership = getCurrentOwner(txHistory, {
       originalOwnerName: item.originalOwnerName,
       originalOwnerEmail: item.originalOwnerEmail,
@@ -60,7 +66,7 @@ export async function POST(
 
     // Check if there's already a pending transfer
     const existingTransfer = await db.query.ownershipTransfers.findFirst({
-      where: eq(ownershipTransfers.itemId, itemId),
+      where: eq(ownershipTransfers.itemId, authenticatedItemId),
     });
 
     if (existingTransfer && !existingTransfer.isConfirmed) {
@@ -77,7 +83,7 @@ export async function POST(
     const createdTransfer = await db
       .insert(ownershipTransfers)
       .values({
-        itemId,
+        itemId: authenticatedItemId,
         currentOwnerEmail: currentOwnership.currentOwnerEmail,
         newOwnerEmail,
         newOwnerName,
@@ -85,9 +91,9 @@ export async function POST(
       })
       .returning();
 
-    // Send transfer request email to current owner from transaction history
+    // Send transfer request email to new owner
     await sendEmail({
-      to: currentOwnership.currentOwnerEmail,
+      to: newOwnerEmail,
       type: "transfer-request",
       data: {
         newOwnerName,
@@ -96,7 +102,7 @@ export async function POST(
           serialNumber: item.serialNumber,
           sku: item.sku,
         },
-        confirmUrl: `${env.NEXT_PUBLIC_APP_URL}/items/${itemId}/transfer/${createdTransfer[0].id}/confirm`,
+        confirmUrl: `${env.NEXT_PUBLIC_APP_URL}/items/${authenticatedItemId}/transfer/${createdTransfer[0].id}/confirm`,
       },
     });
 
@@ -112,6 +118,64 @@ export async function POST(
           error instanceof Error
             ? error.message
             : "Failed to initiate transfer",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("session_token")?.value;
+
+    if (!sessionToken) {
+      return Response.json(
+        { error: "No session token found" },
+        { status: 401 }
+      );
+    }
+
+    const authenticatedItemId = await validateSession(sessionToken);
+    if (!authenticatedItemId) {
+      return Response.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    if (authenticatedItemId !== params.id) {
+      return Response.json({ error: "Unauthorized access" }, { status: 403 });
+    }
+
+    // Find pending transfer for this item
+    const pendingTransfer = await db.query.ownershipTransfers.findFirst({
+      where: eq(ownershipTransfers.itemId, authenticatedItemId),
+    });
+
+    if (!pendingTransfer || pendingTransfer.isConfirmed) {
+      return Response.json(
+        { error: "No pending transfer found" },
+        { status: 404 }
+      );
+    }
+
+    // Delete the transfer request
+    await db
+      .delete(ownershipTransfers)
+      .where(eq(ownershipTransfers.id, pendingTransfer.id));
+
+    return Response.json({ message: "Transfer cancelled successfully" });
+  } catch (error) {
+    console.error("Error in DELETE /api/items/[id]/transfer:", error);
+    return Response.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to cancel transfer",
       },
       { status: 500 }
     );
@@ -228,7 +292,7 @@ export async function PUT(
             createdAt: item!.createdAt,
             blockchainVersion: item!.blockchainVersion,
             globalKeyVersion: item!.globalKeyVersion,
-            nfcLink: item!.nfcLink,
+            nfcLink: item!.nfcLink, // Keep the original NFC link unchanged
           },
         },
       };
@@ -275,7 +339,7 @@ export async function PUT(
         await tx
           .update(items)
           .set({
-            latestTransactionId: newTransaction.id,
+            latestTransactionId: newTransaction.id, // Don't update nfcLink, keep it as original
           })
           .where(eq(items.id, transfer.itemId));
 
@@ -286,25 +350,40 @@ export async function PUT(
           .where(eq(ownershipTransfers.id, transfer.id));
       });
 
-      // Send confirmation email to new owner
-      await sendEmail({
-        to: transfer.newOwnerEmail,
-        type: "transfer-confirmed",
-        data: {
-          itemDetails: {
-            serialNumber: item.serialNumber,
-            sku: item.sku,
+      // Send confirmation emails to both the new owner and original owner
+      await Promise.all([
+        // Send confirmation to new owner
+        sendEmail({
+          to: transfer.newOwnerEmail,
+          type: "transfer-confirmed",
+          data: {
+            itemDetails: {
+              serialNumber: item.serialNumber,
+              sku: item.sku,
+            },
+            viewUrl: `${env.NEXT_PUBLIC_APP_URL}/items/${item.id}`,
           },
-          viewUrl: `${env.NEXT_PUBLIC_APP_URL}/items/${item.id}`,
-        },
-      });
+        }),
+        // Send completion notice to original owner
+        sendEmail({
+          to: transfer.currentOwnerEmail,
+          type: "transfer-completed",
+          data: {
+            itemDetails: {
+              serialNumber: item.serialNumber,
+              sku: item.sku,
+            },
+            newOwnerName: transfer.newOwnerName,
+            newOwnerEmail: transfer.newOwnerEmail,
+          },
+        }),
+      ]);
 
       return Response.json({ message: "Transfer confirmed successfully" });
     } else {
-      // Mark transfer as rejected
+      // Delete the transfer request when rejected
       await db
-        .update(ownershipTransfers)
-        .set({ isConfirmed: false })
+        .delete(ownershipTransfers)
         .where(eq(ownershipTransfers.id, transfer.id));
 
       return Response.json({ message: "Transfer rejected successfully" });

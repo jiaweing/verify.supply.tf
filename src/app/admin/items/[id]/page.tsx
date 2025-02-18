@@ -1,19 +1,6 @@
+import { OwnershipTable } from "@/components/ownership-table";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { ChevronRight } from "lucide-react";
@@ -42,6 +29,11 @@ export default async function ItemPage(props: {
   const item = await db.query.items.findFirst({
     where: (items, { eq }) => eq(items.id, id),
     with: {
+      transactions: {
+        with: {
+          block: true,
+        },
+      },
       ownershipHistory: {
         orderBy: (history, { desc }) => [desc(history.createdAt)],
       },
@@ -74,7 +66,6 @@ export default async function ItemPage(props: {
         <Card>
           <CardHeader>
             <CardTitle>Item Information</CardTitle>
-            <CardDescription>Basic item details</CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4">
@@ -112,9 +103,6 @@ export default async function ItemPage(props: {
         <Card>
           <CardHeader>
             <CardTitle>Origin Information</CardTitle>
-            <CardDescription>
-              Original owner and purchase details
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4">
@@ -158,7 +146,6 @@ export default async function ItemPage(props: {
         <Card>
           <CardHeader>
             <CardTitle>Blockchain Data</CardTitle>
-            <CardDescription>Immutable blockchain information</CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4">
@@ -194,7 +181,6 @@ export default async function ItemPage(props: {
         <Card>
           <CardHeader>
             <CardTitle>NFC Data</CardTitle>
-            <CardDescription>NFC verification information</CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-1 gap-4">
@@ -224,45 +210,9 @@ export default async function ItemPage(props: {
         <Card>
           <CardHeader>
             <CardTitle>Ownership History</CardTitle>
-            <CardDescription>
-              Complete history of ownership transfers
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Owner Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Transfer Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {item.ownershipHistory.length > 0 ? (
-                  item.ownershipHistory.map((history) => (
-                    <TableRow key={history.id}>
-                      <TableCell>{history.newOwnerName}</TableCell>
-                      <TableCell>{history.newOwnerEmail}</TableCell>
-                      <TableCell>
-                        {history.createdAt.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">
-                      {item.originalOwnerName}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.originalOwnerEmail}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.createdAt.toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <OwnershipTable item={item} />
           </CardContent>
         </Card>
       </div>

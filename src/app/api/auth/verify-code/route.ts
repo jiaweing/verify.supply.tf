@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { authCodes, items, ownershipTransfers } from "@/db/schema";
+import { authCodes, items } from "@/db/schema";
 import { authCodeSchema, createSession } from "@/lib/auth";
-import { and, eq, gt } from "drizzle-orm";
+import { getCurrentOwner } from "@/lib/blockchain";
+import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -10,43 +11,52 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, code, itemId } = authCodeSchema.parse(body);
 
-    // Find valid auth code
+    // Find auth code
     const now = new Date();
     const authCode = await db.query.authCodes.findFirst({
-      where: and(
-        eq(authCodes.email, email),
-        eq(authCodes.code, code),
-        gt(authCodes.expiresAt, now)
-      ),
+      where: and(eq(authCodes.email, email), eq(authCodes.code, code)),
     });
 
     if (!authCode) {
       return Response.json(
-        { error: "Invalid or expired code" },
+        { error: "Invalid verification code" },
         { status: 401 }
       );
     }
 
-    // Find specific item and its latest ownership transfer
+    // Explicitly check if code has expired
+    if (now > authCode.expiresAt) {
+      // Delete expired code so user can request a new one
+      await db.delete(authCodes).where(eq(authCodes.id, authCode.id));
+      return Response.json(
+        {
+          error:
+            "This verification code has expired. Please request a new one.",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Find item with its transactions for ownership check
     const item = await db.query.items.findFirst({
       where: eq(items.id, itemId),
+      with: {
+        transactions: {
+          with: {
+            block: true,
+          },
+        },
+      },
     });
 
     if (!item) {
       return Response.json({ error: "Item not found" }, { status: 404 });
     }
 
-    // Get latest ownership transfer if any
-    const latestTransfer = await db.query.ownershipTransfers.findFirst({
-      where: eq(ownershipTransfers.itemId, itemId),
-      orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
-    });
+    // Check if user is current owner using transactions
+    const currentOwner = getCurrentOwner(item.transactions, item);
 
-    // Check if user is the original owner or current owner through transfer
-    const isOriginalOwner = item.originalOwnerEmail === email;
-    const isCurrentOwner = latestTransfer?.currentOwnerEmail === email;
-
-    if (!isOriginalOwner && !isCurrentOwner) {
+    if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
       return Response.json(
         { error: "No item found with this email" },
         { status: 404 }

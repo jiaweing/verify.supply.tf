@@ -1,5 +1,7 @@
 import { EndSessionButton } from "@/components/end-session-button";
 import { ItemImages } from "@/components/item-images";
+import { OwnershipTable } from "@/components/ownership-table";
+import { TransferItemButton } from "@/components/transfer-item-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,14 +15,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { db } from "@/db";
 import { validateSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
@@ -45,8 +39,6 @@ export default async function ItemVerificationPage(props: {
 
   if (sessionToken) {
     const validatedItemId = await validateSession(sessionToken);
-    console.log("Validated Item ID:", validatedItemId);
-    console.log("Requested Item ID:", paramsId);
 
     if (validatedItemId) {
       // Make sure the validated item ID matches the requested item ID
@@ -377,51 +369,17 @@ export default async function ItemVerificationPage(props: {
         </CardContent>
       </Card>
 
-      {showHistory && (
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle>Ownership History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Owner Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Transfer Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {item.ownershipHistory.length > 0 ? (
-                  item.ownershipHistory.map((history) => (
-                    <TableRow key={history.id}>
-                      <TableCell>{history.newOwnerName}</TableCell>
-                      <TableCell>{history.newOwnerEmail}</TableCell>
-                      <TableCell>
-                        {history.createdAt.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">
-                      {item.originalOwnerName}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.originalOwnerEmail}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.createdAt.toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="text-center">
+        <CardHeader>
+          <CardTitle>Ownership History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OwnershipTable item={item} showHistory={showHistory} />
+        </CardContent>
+      </Card>
 
       <div className="flex justify-center">
+        <TransferItemButton itemId={item.id} />
         <EndSessionButton />
       </div>
     </div>

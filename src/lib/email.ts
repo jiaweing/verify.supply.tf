@@ -15,7 +15,11 @@ const transporter = nodemailer.createTransport({
 const companyName = "supply.tf";
 const supportEmail = env.SMTP_FROM;
 
-export type EmailType = "verify" | "transfer-request" | "transfer-confirmed";
+export type EmailType =
+  | "verify"
+  | "transfer-request"
+  | "transfer-confirmed"
+  | "transfer-completed";
 
 interface EmailTemplate<T> {
   subject: string;
@@ -47,7 +51,7 @@ For any questions, contact ${supportEmail}
     `,
   },
   "transfer-request": {
-    subject: "Item Transfer Request",
+    subject: "Accept Item Transfer",
     generateText: ({
       newOwnerName,
       newOwnerEmail,
@@ -62,12 +66,12 @@ For any questions, contact ${supportEmail}
       };
       confirmUrl: string;
     }) => `
-${newOwnerName} (${newOwnerEmail}) has requested to take ownership of your item:
+The owner of the following item would like to transfer ownership to you:
 
 Serial Number: ${itemDetails.serialNumber}
 SKU: ${itemDetails.sku}
 
-To confirm this transfer, click the following link:
+To accept this transfer and take ownership of the item, click the following link:
 ${confirmUrl}
 
 The transfer request will expire in 24 hours.
@@ -88,13 +92,13 @@ For any questions, contact ${supportEmail}
       };
       confirmUrl: string;
     }) => `
-<h2>Item Transfer Request</h2>
-<p>${newOwnerName} (${newOwnerEmail}) has requested to take ownership of your item:</p>
+<h2>Accept Item Transfer</h2>
+<p>The owner of the following item would like to transfer ownership to you:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
-<p>To confirm this transfer, click the following link:</p>
+<p>To accept this transfer and take ownership of the item, click the following link:</p>
 <p><a href="${confirmUrl}" style="display: inline-block; background: #0070f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Confirm Transfer</a></p>
 <p>The transfer request will expire in 24 hours.</p>
 <p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
@@ -112,7 +116,7 @@ For any questions, contact ${supportEmail}
       };
       viewUrl: string;
     }) => `
-Your have successfully taken ownership of the following item:
+You have successfully taken ownership of the following item:
 
 Serial Number: ${itemDetails.serialNumber}
 SKU: ${itemDetails.sku}
@@ -143,6 +147,51 @@ For any questions, contact ${supportEmail}
 <p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
     `,
   },
+  "transfer-completed": {
+    subject: "Item Transfer Complete",
+    generateText: ({
+      itemDetails,
+      newOwnerName,
+      newOwnerEmail,
+    }: {
+      itemDetails: {
+        serialNumber: string;
+        sku: string;
+      };
+      newOwnerName: string;
+      newOwnerEmail: string;
+    }) => `
+The transfer of your item has been completed:
+
+Serial Number: ${itemDetails.serialNumber}
+SKU: ${itemDetails.sku}
+
+New Owner: ${newOwnerName} (${newOwnerEmail})
+
+For any questions, contact ${supportEmail}
+    `,
+    generateHtml: ({
+      itemDetails,
+      newOwnerName,
+      newOwnerEmail,
+    }: {
+      itemDetails: {
+        serialNumber: string;
+        sku: string;
+      };
+      newOwnerName: string;
+      newOwnerEmail: string;
+    }) => `
+<h2>Item Transfer Complete</h2>
+<p>The transfer of your item has been completed:</p>
+<div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
+  <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>SKU:</strong> ${itemDetails.sku}</p>
+  <p><strong>New Owner:</strong> ${newOwnerName} (${newOwnerEmail})</p>
+</div>
+<p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
+    `,
+  },
 };
 
 interface VerifyEmailData {
@@ -167,10 +216,20 @@ interface TransferConfirmedEmailData {
   viewUrl: string;
 }
 
+interface TransferCompletedEmailData {
+  itemDetails: {
+    serialNumber: string;
+    sku: string;
+  };
+  newOwnerName: string;
+  newOwnerEmail: string;
+}
+
 type EmailData = {
   verify: VerifyEmailData;
   "transfer-request": TransferRequestEmailData;
   "transfer-confirmed": TransferConfirmedEmailData;
+  "transfer-completed": TransferCompletedEmailData;
 };
 
 export async function sendEmail<T extends EmailType>({

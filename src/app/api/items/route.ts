@@ -163,6 +163,8 @@ export async function POST(request: Request) {
     // Create NFC link
     const nfcLink = await EncryptionService.generateNfcLink(
       itemId,
+      parsed.data.serialNumber,
+      parsed.data.nfcSerialNumber,
       itemKey,
       globalKeyVersion
     );
