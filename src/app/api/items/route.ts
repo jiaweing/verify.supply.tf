@@ -160,6 +160,13 @@ export async function POST(request: Request) {
 
     const nextBlockNumber = (lastBlock?.blockNumber ?? 0) + 1;
 
+    // Create NFC link
+    const nfcLink = await EncryptionService.generateNfcLink(
+      itemId,
+      itemKey,
+      globalKeyVersion
+    );
+
     // Create transaction data for item creation using the same timestamp
     const transactionData: TransactionData = {
       type: "create",
@@ -169,6 +176,28 @@ export async function POST(request: Request) {
         to: {
           name: parsed.data.originalOwnerName,
           email: parsed.data.originalOwnerEmail,
+        },
+        item: {
+          id: itemId,
+          serialNumber: parsed.data.serialNumber,
+          sku: parsed.data.sku,
+          mintNumber: mintNumber,
+          weight: parsed.data.weight,
+          nfcSerialNumber: parsed.data.nfcSerialNumber,
+          orderId: parsed.data.orderId,
+          originalOwnerName: parsed.data.originalOwnerName,
+          originalOwnerEmail: parsed.data.originalOwnerEmail,
+          originalPurchaseDate: new Date(parsed.data.purchaseDate),
+          purchasedFrom: parsed.data.purchasedFrom,
+          manufactureDate: new Date(parsed.data.manufactureDate),
+          producedAt: parsed.data.producedAt,
+          createdAt: timestamp,
+          itemEncryptionKeyHash: crypto
+            .createHash("sha256")
+            .update(itemKey)
+            .digest("hex"),
+          globalKeyVersion: globalKeyVersion,
+          nfcLink: nfcLink,
         },
       },
     };
@@ -183,13 +212,6 @@ export async function POST(request: Request) {
 
     const blockHash = block.calculateHash();
     const merkleRoot = block.getMerkleTree().getRoot();
-
-    // Create NFC link
-    const nfcLink = await EncryptionService.generateNfcLink(
-      itemId,
-      itemKey,
-      globalKeyVersion
-    );
 
     await db.transaction(async (tx) => {
       // Create new block
@@ -213,6 +235,7 @@ export async function POST(request: Request) {
           transactionType: "create",
           itemId,
           data: transactionData,
+          timestamp, // Required by schema
           hash: merkleRoot, // Since we only have one transaction per block
         })
         .returning();

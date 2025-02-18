@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/input-otp";
 import { TurnstileWidget } from "@/components/ui/turnstile";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -375,7 +375,7 @@ export function VerifyForm({
                     Verifying code...
                   </>
                 ) : (
-                  "Submit Code"
+                  "Verify"
                 )}
               </Button>
               <Button
@@ -391,11 +391,21 @@ export function VerifyForm({
                     Resending...
                   </>
                 ) : canResend ? (
-                  "Resend Code"
+                  "I did not receive the code"
                 ) : (
                   `Resend Code (${resendTimer}s)`
                 )}
               </Button>
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm"
+                  onClick={() => setStep("verify")}
+                >
+                  <ChevronLeft /> Go Back
+                </Button>
+              </div>
             </div>
           </>
         )}

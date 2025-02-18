@@ -2,7 +2,12 @@ import { db } from "@/db";
 import { blocks, items, ownershipTransfers, transactions } from "@/db/schema";
 import { env } from "@/env.mjs";
 import { validateSession } from "@/lib/auth";
-import { Block, TransactionData } from "@/lib/blockchain";
+import {
+  Block,
+  TransactionData,
+  getCurrentOwner,
+  getItemTransactionHistory,
+} from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -36,7 +41,7 @@ export async function POST(
 
     const { newOwnerEmail, newOwnerName } = await request.json();
 
-    // Get current item details
+    // Get full item details and transaction history
     const item = await db.query.items.findFirst({
       where: eq(items.id, itemId),
     });
@@ -44,6 +49,14 @@ export async function POST(
     if (!item) {
       return Response.json({ error: "Item not found" }, { status: 404 });
     }
+
+    // Get current ownership info from transaction history
+    const txHistory = await getItemTransactionHistory(db, itemId);
+    const currentOwnership = getCurrentOwner(txHistory, {
+      originalOwnerName: item.originalOwnerName,
+      originalOwnerEmail: item.originalOwnerEmail,
+      createdAt: item.createdAt,
+    });
 
     // Check if there's already a pending transfer
     const existingTransfer = await db.query.ownershipTransfers.findFirst({
@@ -65,16 +78,16 @@ export async function POST(
       .insert(ownershipTransfers)
       .values({
         itemId,
-        currentOwnerEmail: item.currentOwnerEmail,
+        currentOwnerEmail: currentOwnership.currentOwnerEmail,
         newOwnerEmail,
         newOwnerName,
         expiresAt,
       })
       .returning();
 
-    // Send transfer request email to current owner
+    // Send transfer request email to current owner from transaction history
     await sendEmail({
-      to: item.currentOwnerEmail,
+      to: currentOwnership.currentOwnerEmail,
       type: "transfer-request",
       data: {
         newOwnerName,
@@ -152,6 +165,7 @@ export async function PUT(
 
     if (action === "confirm") {
       // Get current item details
+      // Get full item details and transaction history
       const item = await db.query.items.findFirst({
         where: eq(items.id, transfer.itemId),
         with: {
@@ -161,6 +175,13 @@ export async function PUT(
             },
           },
         },
+      });
+
+      const txHistory = await getItemTransactionHistory(db, transfer.itemId);
+      const currentOwnership = getCurrentOwner(txHistory, {
+        originalOwnerName: item!.originalOwnerName,
+        originalOwnerEmail: item!.originalOwnerEmail,
+        createdAt: item!.createdAt,
       });
 
       if (!item) {
@@ -177,19 +198,37 @@ export async function PUT(
       const timestampISO = new Date().toISOString();
       const timestamp = new Date(timestampISO); // For DB
 
-      // Create transaction data
       const transactionData: TransactionData = {
         type: "transfer",
-        itemId: item.id,
+        itemId: item!.id,
         timestamp: timestampISO,
         data: {
           from: {
-            name: item.currentOwnerName,
-            email: item.currentOwnerEmail,
+            name: currentOwnership.currentOwnerName,
+            email: currentOwnership.currentOwnerEmail,
           },
           to: {
             name: transfer.newOwnerName,
             email: transfer.newOwnerEmail,
+          },
+          item: {
+            id: item!.id,
+            serialNumber: item!.serialNumber,
+            sku: item!.sku,
+            mintNumber: item!.mintNumber,
+            weight: item!.weight,
+            nfcSerialNumber: item!.nfcSerialNumber,
+            orderId: item!.orderId,
+            originalOwnerName: item!.originalOwnerName,
+            originalOwnerEmail: item!.originalOwnerEmail,
+            originalPurchaseDate: item!.originalPurchaseDate,
+            purchasedFrom: item!.purchasedFrom,
+            manufactureDate: item!.manufactureDate,
+            producedAt: item!.producedAt,
+            createdAt: item!.createdAt,
+            itemEncryptionKeyHash: item!.itemEncryptionKeyHash,
+            globalKeyVersion: item!.globalKeyVersion,
+            nfcLink: item!.nfcLink,
           },
         },
       };
@@ -227,17 +266,15 @@ export async function PUT(
             transactionType: "transfer",
             itemId: item.id,
             data: transactionData,
+            timestamp, // Add timestamp since it's required
             hash: merkleRoot, // Since we have one transaction per block, this is the same as merkle root
           })
           .returning();
 
-        // Update item ownership
+        // Only update the latest transaction ID since ownership is tracked in transactions
         await tx
           .update(items)
           .set({
-            currentOwnerName: transfer.newOwnerName,
-            currentOwnerEmail: transfer.newOwnerEmail,
-            modifiedAt: timestamp,
             latestTransactionId: newTransaction.id,
           })
           .where(eq(items.id, transfer.itemId));

@@ -50,6 +50,25 @@ export interface TransactionData {
       name: string;
       email: string;
     };
+    item: {
+      id: string;
+      serialNumber: string;
+      sku: string;
+      mintNumber: string;
+      weight: string;
+      nfcSerialNumber: string;
+      orderId: string;
+      originalOwnerName: string;
+      originalOwnerEmail: string;
+      originalPurchaseDate: Date;
+      purchasedFrom: string;
+      manufactureDate: Date;
+      producedAt: string;
+      createdAt: Date;
+      itemEncryptionKeyHash: string;
+      globalKeyVersion: string;
+      nfcLink: string;
+    };
   };
 }
 
@@ -297,8 +316,7 @@ export async function verifyItemChain(
   }
 
   // First verify the blockchain integrity
-
-  // Verify transaction sequence
+  // Then verify transaction sequence and chain links
   for (let i = 0; i < transactions.length; i++) {
     const transaction = transactions[i];
     const block = transaction.block;
@@ -369,6 +387,44 @@ export async function verifyItemChain(
     }
   }
 
-  // All blockchain integrity checks passed
+  // Verify item data matches latest transaction
+  const latestTx = transactions[transactions.length - 1];
+  if (!latestTx) {
+    return { isValid: false, error: "No transactions found for item" };
+  }
+  const latestTxData = latestTx.data as TransactionData;
+
+  // The actual item data should match what's recorded in the latest transaction
+  const itemMatches =
+    item.id === latestTxData.data.item.id &&
+    item.serialNumber === latestTxData.data.item.serialNumber &&
+    item.sku === latestTxData.data.item.sku &&
+    item.mintNumber === latestTxData.data.item.mintNumber &&
+    item.weight === latestTxData.data.item.weight &&
+    item.nfcSerialNumber === latestTxData.data.item.nfcSerialNumber &&
+    item.orderId === latestTxData.data.item.orderId &&
+    item.originalOwnerName === latestTxData.data.item.originalOwnerName &&
+    item.originalOwnerEmail === latestTxData.data.item.originalOwnerEmail &&
+    item.originalPurchaseDate.getTime() ===
+      new Date(latestTxData.data.item.originalPurchaseDate).getTime() &&
+    item.purchasedFrom === latestTxData.data.item.purchasedFrom &&
+    item.manufactureDate.getTime() ===
+      new Date(latestTxData.data.item.manufactureDate).getTime() &&
+    item.producedAt === latestTxData.data.item.producedAt &&
+    item.createdAt.getTime() ===
+      new Date(latestTxData.data.item.createdAt).getTime() &&
+    item.itemEncryptionKeyHash ===
+      latestTxData.data.item.itemEncryptionKeyHash &&
+    item.globalKeyVersion === latestTxData.data.item.globalKeyVersion &&
+    item.nfcLink === latestTxData.data.item.nfcLink;
+
+  if (!itemMatches) {
+    return {
+      isValid: false,
+      error: "Current item data does not match blockchain record",
+    };
+  }
+
+  // All blockchain integrity and item data checks passed
   return { isValid: true };
 }
