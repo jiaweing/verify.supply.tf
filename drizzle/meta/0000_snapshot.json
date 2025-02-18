@@ -1,5 +1,5 @@
 {
-  "id": "f607b3a9-41ed-4088-8bec-c17e4e90a7a7",
+  "id": "70370425-7fd2-4031-9693-03eae74fc428",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -318,11 +318,12 @@
           "notNull": true,
           "default": "now()"
         },
-        "item_encryption_key_hash": {
-          "name": "item_encryption_key_hash",
-          "type": "varchar(64)",
+        "blockchain_version": {
+          "name": "blockchain_version",
+          "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'v1'"
         },
         "global_key_version": {
           "name": "global_key_version",

@@ -205,9 +205,9 @@ export default async function ItemPage(props: {
                 </dd>
               </div>
               <div>
-                <dt className="font-medium">Item Encryption Key Hash</dt>
+                <dt className="font-medium">Blockchain Version</dt>
                 <dd className="text-muted-foreground font-mono text-sm break-all mt-1">
-                  {item.itemEncryptionKeyHash}
+                  {item.blockchainVersion}
                 </dd>
               </div>
               <div>

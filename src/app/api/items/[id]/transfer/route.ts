@@ -226,7 +226,7 @@ export async function PUT(
             manufactureDate: item!.manufactureDate,
             producedAt: item!.producedAt,
             createdAt: item!.createdAt,
-            itemEncryptionKeyHash: item!.itemEncryptionKeyHash,
+            blockchainVersion: item!.blockchainVersion,
             globalKeyVersion: item!.globalKeyVersion,
             nfcLink: item!.nfcLink,
           },

@@ -192,10 +192,7 @@ export async function POST(request: Request) {
           manufactureDate: new Date(parsed.data.manufactureDate),
           producedAt: parsed.data.producedAt,
           createdAt: timestamp,
-          itemEncryptionKeyHash: crypto
-            .createHash("sha256")
-            .update(itemKey)
-            .digest("hex"),
+          blockchainVersion: env.BLOCKCHAIN_VERSION,
           globalKeyVersion: globalKeyVersion,
           nfcLink: nfcLink,
         },
@@ -257,10 +254,7 @@ export async function POST(request: Request) {
         producedAt: parsed.data.producedAt,
         creationBlockId: newBlock.id,
         latestTransactionId: newTransaction.id,
-        itemEncryptionKeyHash: crypto
-          .createHash("sha256")
-          .update(itemKey)
-          .digest("hex"),
+        blockchainVersion: env.BLOCKCHAIN_VERSION,
         globalKeyVersion,
         nfcLink,
         createdAt: timestamp, // Use normalized timestamp

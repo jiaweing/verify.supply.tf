@@ -52,7 +52,7 @@ CREATE TABLE "items" (
 	"creation_block_id" integer,
 	"latest_transaction_id" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"item_encryption_key_hash" varchar(64) NOT NULL,
+	"blockchain_version" varchar(32) DEFAULT 'v1' NOT NULL,
 	"global_key_version" varchar(64) NOT NULL,
 	"nfc_link" varchar(255) NOT NULL,
 	CONSTRAINT "items_serial_number_unique" UNIQUE("serial_number"),

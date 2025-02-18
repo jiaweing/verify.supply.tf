@@ -1,4 +1,5 @@
 import * as schema from "@/db/schema";
+import { env } from "@/env.mjs";
 import { createHash } from "crypto";
 import { asc, eq, type InferModel } from "drizzle-orm";
 import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -80,7 +81,7 @@ export interface TransactionData {
       manufactureDate: Date;
       producedAt: string;
       createdAt: Date;
-      itemEncryptionKeyHash: string;
+      blockchainVersion: string;
       globalKeyVersion: string;
       nfcLink: string;
     };
@@ -428,8 +429,7 @@ export async function verifyItemChain(
     item.producedAt === latestTxData.data.item.producedAt &&
     item.createdAt.getTime() ===
       new Date(latestTxData.data.item.createdAt).getTime() &&
-    item.itemEncryptionKeyHash ===
-      latestTxData.data.item.itemEncryptionKeyHash &&
+    item.blockchainVersion === latestTxData.data.item.blockchainVersion &&
     item.globalKeyVersion === latestTxData.data.item.globalKeyVersion &&
     item.nfcLink === latestTxData.data.item.nfcLink;
 
@@ -519,10 +519,10 @@ export async function verifyItemChain(
     item.createdAt === latestTxData.data.item.createdAt
   );
   console.log(
-    "item.itemEncryptionKeyHash",
-    item.itemEncryptionKeyHash,
-    latestTxData.data.item.itemEncryptionKeyHash,
-    item.itemEncryptionKeyHash === latestTxData.data.item.itemEncryptionKeyHash
+    "item.blockchainVersion",
+    item.blockchainVersion,
+    latestTxData.data.item.blockchainVersion,
+    env.BLOCKCHAIN_VERSION === latestTxData.data.item.blockchainVersion
   );
   console.log(
     "item.globalKeyVersion",

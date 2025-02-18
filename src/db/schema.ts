@@ -81,9 +81,9 @@ export const items = pgTable("items", {
 
   // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  itemEncryptionKeyHash: varchar("item_encryption_key_hash", {
-    length: 64,
-  }).notNull(),
+  blockchainVersion: varchar("blockchain_version", { length: 32 })
+    .default("v1")
+    .notNull(),
   globalKeyVersion: varchar("global_key_version", { length: 64 }).notNull(),
   nfcLink: varchar("nfc_link", { length: 255 }).unique().notNull(),
 });

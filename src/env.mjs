@@ -54,6 +54,9 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
+
+    // Blockchain
+    BLOCKCHAIN_VERSION: z.string().min(1),
   },
 
   client: {
@@ -81,6 +84,7 @@ export const env = createEnv({
       process.env.OWNERSHIP_TRANSFER_EXPIRY_HOURS,
     AUTH_CODE_EXPIRY_MINUTES: process.env.AUTH_CODE_EXPIRY_MINUTES,
     NODE_ENV: process.env.NODE_ENV,
+    BLOCKCHAIN_VERSION: process.env.BLOCKCHAIN_VERSION,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
