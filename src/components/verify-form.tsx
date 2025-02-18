@@ -16,6 +16,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { TurnstileWidget } from "@/components/ui/turnstile";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ const verifySchema = z.object({
     .min(1, "Serial number is required")
     .max(64, "Serial number must be less than 64 characters"),
   purchaseDate: z.string().min(1, "Purchase date is required"),
+  turnstileToken: z.string().optional(),
 });
 
 type FormData = z.infer<typeof verifySchema>;
@@ -68,11 +70,14 @@ export function VerifyForm({
           .toISOString()
           .split("T")[0],
       code: "", // Always initialize code as empty
+      turnstileToken: "",
     },
   });
 
   const [step, setStep] = React.useState<"verify" | "code">("verify");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [verifiedData, setVerifiedData] = React.useState<Partial<FormData>>({});
+  const [turnstileToken, setTurnstileToken] = React.useState<string>("");
 
   // Notify parent component of step changes
   React.useEffect(() => {
@@ -86,12 +91,16 @@ export function VerifyForm({
     }
   }, [step, form]);
 
-  const [verifiedData, setVerifiedData] = React.useState<Partial<FormData>>({});
-
   async function onSubmit(values: FormData) {
     setIsLoading(true);
     try {
       if (step === "verify") {
+        if (!turnstileToken) {
+          toast.error("Please complete the CAPTCHA verification");
+          setIsLoading(false);
+          return;
+        }
+
         // Store the verified data before requesting code
         setVerifiedData({
           email: values.email,
@@ -110,6 +119,7 @@ export function VerifyForm({
             key: effectiveKey,
             version: effectiveVersion,
             itemId,
+            turnstileToken,
           }),
         });
 
@@ -222,6 +232,8 @@ export function VerifyForm({
                 </FormItem>
               )}
             />
+
+            <TurnstileWidget onVerify={setTurnstileToken} />
 
             <Button
               type="button"

@@ -23,14 +23,38 @@ const requestCodeSchema = z.object({
   key: z.string().optional(),
   version: z.string().optional(),
   itemId: z.string().optional(),
+  turnstileToken: z.string(),
 });
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse and validate request
+    // Parse request body
     const body = await req.json();
-    const { email, serialNumber, purchaseDate, key, version } =
+    const { email, serialNumber, purchaseDate, key, version, turnstileToken } =
       requestCodeSchema.parse(body);
+
+    // Validate Turnstile token
+    const turnstileResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          secret: process.env.TURNSTILE_SECRET_KEY,
+          response: turnstileToken,
+        }),
+      }
+    );
+
+    const turnstileData = await turnstileResponse.json();
+    if (!turnstileData.success) {
+      return Response.json(
+        { error: "Invalid CAPTCHA verification" },
+        { status: 400 }
+      );
+    }
 
     console.log("email: ", email);
     console.log("serialNumber: ", serialNumber);

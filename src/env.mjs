@@ -47,6 +47,9 @@ export const env = createEnv({
       .pipe(z.number().int().positive())
       .default("5"),
 
+    // Cloudflare Turnstile
+    TURNSTILE_SECRET_KEY: z.string().min(1),
+
     // Node environment
     NODE_ENV: z
       .enum(["development", "production", "test"])
@@ -56,6 +59,8 @@ export const env = createEnv({
   client: {
     // App
     NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+    // Cloudflare Turnstile
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1),
   },
 
   runtimeEnv: {
@@ -77,6 +82,8 @@ export const env = createEnv({
     AUTH_CODE_EXPIRY_MINUTES: process.env.AUTH_CODE_EXPIRY_MINUTES,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   },
 
   skipValidation: process.env.CI === "true",
