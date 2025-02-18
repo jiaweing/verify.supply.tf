@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { formatDate, formatDateTime } from "@/lib/date";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -121,7 +122,7 @@ export default async function ItemPage(props: {
               <div>
                 <dt className="font-medium">Purchase Date</dt>
                 <dd className="text-muted-foreground">
-                  {item.originalPurchaseDate.toLocaleDateString()}
+                  {formatDateTime(item.originalPurchaseDate)}
                 </dd>
               </div>
               <div>
@@ -131,7 +132,7 @@ export default async function ItemPage(props: {
               <div>
                 <dt className="font-medium">Manufacture Date</dt>
                 <dd className="text-muted-foreground">
-                  {item.manufactureDate.toLocaleDateString()}
+                  {formatDate(item.manufactureDate)}
                 </dd>
               </div>
               <div>
@@ -170,7 +171,7 @@ export default async function ItemPage(props: {
               <div>
                 <dt className="font-medium">Created At</dt>
                 <dd className="text-muted-foreground">
-                  {item.createdAt.toLocaleString()}
+                  {formatDateTime(item.createdAt)}
                 </dd>
               </div>
             </dl>

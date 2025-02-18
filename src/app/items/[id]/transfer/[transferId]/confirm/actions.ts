@@ -17,7 +17,7 @@ export async function processTransfer(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          transferId: parseInt(transferId),
+          transferId,
           action,
         }),
       }

@@ -322,6 +322,10 @@ export async function PUT(
           })
           .returning();
 
+        // Since we're using MerkleTree for verification, use merkleRoot as transaction hash
+        const merkleTree = block.getMerkleTree();
+        const transactionHash = merkleTree.getRoot();
+
         // Create transaction record
         const [newTransaction] = await tx
           .insert(transactions)
@@ -330,8 +334,8 @@ export async function PUT(
             transactionType: "transfer",
             itemId: item.id,
             data: transactionData,
-            timestamp, // Add timestamp since it's required
-            hash: merkleRoot, // Since we have one transaction per block, this is the same as merkle root
+            timestamp,
+            hash: transactionHash,
           })
           .returning();
 

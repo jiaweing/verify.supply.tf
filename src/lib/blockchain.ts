@@ -227,8 +227,11 @@ export class Block {
     timestamp = new Date().toISOString(),
     nonce = 0
   ) {
-    this.transactions = transactions;
-    this.merkleTree = new MerkleTree(transactions);
+    this.transactions = transactions.map((tx) => ({
+      ...tx,
+      timestamp: normalizeTimestamp(tx.timestamp),
+    }));
+    this.merkleTree = new MerkleTree(this.transactions);
 
     this.data = {
       blockNumber,
@@ -259,6 +262,12 @@ export class Block {
     const transaction = this.transactions[transactionIndex];
     if (!transaction) return false;
 
+    // For single-transaction blocks, the merkle root is the transaction hash
+    if (this.transactions.length === 1) {
+      return this.merkleTree.getRoot() === this.data.merkleRoot;
+    }
+
+    // For multiple transactions, verify using merkle proof
     const transactionHash = hash(transaction);
     const proof = this.merkleTree.getProof(transactionIndex);
     return MerkleTree.verify(
@@ -313,6 +322,23 @@ export async function verifyItemChain(
   db: Database,
   itemId: string
 ): Promise<{ isValid: boolean; error?: string }> {
+  // Helper function to normalize database timestamps and transactions
+  const normalizeDbBlock = (block: DbBlock) => ({
+    ...block,
+    timestamp: normalizeTimestamp(block.timestamp.toISOString()),
+  });
+
+  const normalizeDbTransaction = (transaction: TransactionHistoryItem) => {
+    const txData = transaction.data as TransactionData;
+    return {
+      ...transaction,
+      timestamp: normalizeTimestamp(transaction.timestamp.toISOString()),
+      data: {
+        ...txData,
+        timestamp: normalizeTimestamp(txData.timestamp),
+      } as TransactionData,
+    };
+  };
   const item = await db.query.items.findFirst({
     where: (items, { eq }) => eq(items.id, itemId),
     with: {
@@ -343,13 +369,15 @@ export async function verifyItemChain(
       };
     }
 
-    // Create Block instance for verification
+    // Create Block instance for verification with normalized timestamp and transaction
+    const normalizedBlock = normalizeDbBlock(block);
+    const normalizedTransaction = normalizeDbTransaction(transaction);
     const blockInstance = new Block(
-      block.blockNumber,
-      block.previousHash,
-      [transaction.data as TransactionData],
-      block.timestamp.toISOString(), // Use the exact timestamp from the block
-      block.nonce
+      normalizedBlock.blockNumber,
+      normalizedBlock.previousHash,
+      [normalizedTransaction.data as TransactionData],
+      normalizedBlock.timestamp,
+      normalizedBlock.nonce
     );
 
     // Verify block hash

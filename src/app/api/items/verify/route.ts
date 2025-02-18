@@ -9,24 +9,6 @@ import { createSession } from "@/lib/auth";
 import { Block, TransactionData, getCurrentOwner } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
-import crypto from "crypto";
-
-function stableStringify(obj: unknown): string {
-  if (typeof obj !== "object" || obj === null) {
-    return JSON.stringify(obj);
-  }
-
-  if (Array.isArray(obj)) {
-    return "[" + obj.map(stableStringify).join(",") + "]";
-  }
-
-  const sortedKeys = Object.keys(obj).sort();
-  const items = sortedKeys.map((key) => {
-    const value = (obj as Record<string, unknown>)[key];
-    return `"${key}":${stableStringify(value)}`;
-  });
-  return "{" + items.join(",") + "}";
-}
 
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
@@ -215,21 +197,11 @@ async function verifyBlockchain(productId: string) {
       };
     }
 
-    // Verify transaction hash
-    const computedTransactionHash = crypto
-      .createHash("sha256")
-      .update(stableStringify(transaction.data))
-      .digest("hex");
+    // For single-transaction blocks, the transaction hash should match the merkle root
+    const merkleTree = blockInstance.getMerkleTree();
+    const merkleRoot = merkleTree.getRoot();
 
-    if (computedTransactionHash !== transaction.hash) {
-      return {
-        isValid: false,
-        error: `Invalid transaction hash at block ${block.blockNumber}`,
-      };
-    }
-
-    // Verify merkle root (simple implementation since we only have one transaction per block)
-    if (computedTransactionHash !== block.merkleRoot) {
+    if (merkleRoot !== block.merkleRoot) {
       return {
         isValid: false,
         error: `Invalid merkle root at block ${block.blockNumber}`,

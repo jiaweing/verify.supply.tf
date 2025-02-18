@@ -21,7 +21,7 @@ export default async function TransferConfirmPage({
 
   // Get transfer and item details
   const transfer = await db.query.ownershipTransfers.findFirst({
-    where: eq(ownershipTransfers.id, parseInt(transferId)),
+    where: eq(ownershipTransfers.id, transferId),
   });
 
   // Get item details

@@ -11,7 +11,6 @@ import { z } from "zod";
 const requestCodeSchema = z.object({
   email: z.string().email(),
   serialNumber: z.string().min(1),
-  purchaseDate: z.string().min(1),
   key: z.string().optional(),
   version: z.string().optional(),
   itemId: z.string().optional(),
@@ -22,7 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     // Parse request body
     const body = await req.json();
-    const { email, serialNumber, purchaseDate, key, version, turnstileToken } =
+    const { email, serialNumber, key, version, turnstileToken } =
       requestCodeSchema.parse(body);
 
     // Validate Turnstile token
@@ -148,23 +147,10 @@ export async function POST(req: NextRequest) {
     // Get current owner info including latest transfer date
     const currentOwner = getCurrentOwner(item.transactions, item);
 
-    // Check both email and purchase date
+    // Check email matches current owner
     if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
       return Response.json(
         { error: "Email does not match current owner" },
-        { status: 403 }
-      );
-    }
-
-    // Verify purchase date matches
-    const lastTransferDate = new Date(currentOwner.lastTransferDate)
-      .toISOString()
-      .split("T")[0];
-    const submittedDate = new Date(purchaseDate).toISOString().split("T")[0];
-
-    if (lastTransferDate !== submittedDate) {
-      return Response.json(
-        { error: "Purchase date does not match transfer date" },
         { status: 403 }
       );
     }

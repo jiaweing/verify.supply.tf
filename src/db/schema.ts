@@ -89,7 +89,7 @@ export const items = pgTable("items", {
 });
 
 export const ownershipTransfers = pgTable("ownership_transfers", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   itemId: uuid("item_id")
     .references(() => items.id)
     .notNull(),

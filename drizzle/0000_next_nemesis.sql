@@ -61,7 +61,7 @@ CREATE TABLE "items" (
 );
 --> statement-breakpoint
 CREATE TABLE "ownership_transfers" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"item_id" uuid NOT NULL,
 	"current_owner_email" varchar(255) NOT NULL,
 	"new_owner_email" varchar(255) NOT NULL,

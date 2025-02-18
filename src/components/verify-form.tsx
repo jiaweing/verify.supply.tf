@@ -32,7 +32,6 @@ const verifySchema = z.object({
     .string()
     .min(1, "Serial number is required")
     .max(64, "Serial number must be less than 64 characters"),
-  purchaseDate: z.string().min(1, "Purchase date is required"),
   turnstileToken: z.string().optional(),
 });
 
@@ -64,9 +63,6 @@ export function VerifyForm({
     defaultValues: {
       email: defaultValues?.email || "",
       serialNumber: defaultValues?.serialNumber || "",
-      purchaseDate: defaultValues?.purchaseDate
-        ? new Date(defaultValues.purchaseDate).toLocaleDateString("en-CA") // Display in local timezone
-        : new Date().toLocaleDateString("en-CA"), // Default to today in local timezone
       code: "", // Always initialize code as empty
       turnstileToken: "",
     },
@@ -125,7 +121,6 @@ export function VerifyForm({
         setVerifiedData({
           email: values.email,
           serialNumber: values.serialNumber,
-          purchaseDate: values.purchaseDate,
         });
 
         // Request verification code
@@ -135,13 +130,6 @@ export function VerifyForm({
           body: JSON.stringify({
             email: values.email,
             serialNumber: values.serialNumber,
-            purchaseDate: (() => {
-              // Convert date string to start of day in UTC
-              const date = new Date(values.purchaseDate);
-              return new Date(
-                Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-              ).toISOString();
-            })(),
             key: effectiveKey,
             version: effectiveVersion,
             itemId,
@@ -206,13 +194,6 @@ export function VerifyForm({
         body: JSON.stringify({
           email: verifiedData.email!,
           serialNumber: verifiedData.serialNumber!,
-          purchaseDate: (() => {
-            // Convert date string to start of day in UTC
-            const date = new Date(verifiedData.purchaseDate!);
-            return new Date(
-              Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-            ).toISOString();
-          })(),
           key: effectiveKey,
           version: effectiveVersion,
           itemId,
@@ -282,24 +263,6 @@ export function VerifyForm({
                       placeholder="Enter your email"
                       disabled={!!defaultValues?.email}
                       {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="purchaseDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Purchase Date</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      {...field}
-                      disabled={!!defaultValues?.purchaseDate}
                     />
                   </FormControl>
                   <FormMessage />

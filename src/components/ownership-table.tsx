@@ -6,6 +6,7 @@ import {
   type Transaction,
 } from "@/db/schema";
 import { TransactionData } from "@/lib/blockchain";
+import { formatDateTime } from "@/lib/date";
 import { CancelTransferButton } from "./cancel-transfer-button";
 import {
   Table,
@@ -48,7 +49,7 @@ export function OwnershipTable({
         <TableRow>
           <TableCell>{item.originalOwnerName}</TableCell>
           <TableCell>{item.originalOwnerEmail}</TableCell>
-          <TableCell>{item.createdAt.toLocaleString()}</TableCell>
+          <TableCell>{formatDateTime(item.createdAt)}</TableCell>
           <TableCell>
             <Badge variant="secondary">Original</Badge>
           </TableCell>
@@ -64,7 +65,7 @@ export function OwnershipTable({
               <TableRow key={tx.id}>
                 <TableCell>{data.data.to.name}</TableCell>
                 <TableCell>{data.data.to.email}</TableCell>
-                <TableCell>{tx.timestamp.toLocaleString()}</TableCell>
+                <TableCell>{formatDateTime(tx.timestamp)}</TableCell>
                 <TableCell>
                   <Badge variant="default">Current</Badge>
                 </TableCell>
@@ -82,7 +83,7 @@ export function OwnershipTable({
             <TableRow key={history.id}>
               <TableCell>{history.newOwnerName}</TableCell>
               <TableCell>{history.newOwnerEmail}</TableCell>
-              <TableCell>{history.createdAt.toLocaleString()}</TableCell>
+              <TableCell>{formatDateTime(history.createdAt)}</TableCell>
               <TableCell>
                 <Badge variant="outline">Pending</Badge>
               </TableCell>
