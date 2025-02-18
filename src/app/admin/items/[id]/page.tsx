@@ -193,7 +193,7 @@ export default async function ItemPage(props: {
           <CardContent>
             <dl className="grid grid-cols-1 gap-4">
               <div>
-                <dt className="font-medium">NFC Link</dt>
+                <dt className="font-medium">Link</dt>
                 <dd className="text-gray-500 font-mono text-sm break-all mt-1">
                   {item.nfcLink}
                 </dd>

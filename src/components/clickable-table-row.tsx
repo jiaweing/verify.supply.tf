@@ -52,7 +52,7 @@ export function ClickableTableRow({
             size="sm"
             onClick={() => {
               navigator.clipboard.writeText(nfcLink);
-              toast.success("NFC link copied to clipboard");
+              toast.success("Link copied to clipboard");
             }}
           >
             <Copy className="h-4 w-4 text-muted-foreground" />
