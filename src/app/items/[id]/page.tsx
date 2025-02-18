@@ -13,6 +13,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { db } from "@/db";
 import { validateSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
@@ -370,51 +378,45 @@ export default async function ItemVerificationPage(props: {
       </Card>
 
       {showHistory && (
-        <Card className="text-center">
-          <CardHeader>
+        <Card>
+          <CardHeader className="text-center">
             <CardTitle>Ownership History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="max-w-xl mx-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="text-left font-medium px-4 py-2">
-                      Owner Name
-                    </th>
-                    <th className="text-left font-medium px-4 py-2">Email</th>
-                    <th className="text-left font-medium px-4 py-2">
-                      Transfer Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(item.ownershipHistory ?? []).map((history) => (
-                    <tr key={history.id}>
-                      <td className="px-4 py-2 text-muted-foreground">
-                        {history.newOwnerName}
-                      </td>
-                      <td className="px-4 py-2 text-muted-foreground">
-                        {history.newOwnerEmail}
-                      </td>
-                      <td className="px-4 py-2 text-muted-foreground">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Owner Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Transfer Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {item.ownershipHistory.length > 0 ? (
+                  item.ownershipHistory.map((history) => (
+                    <TableRow key={history.id}>
+                      <TableCell>{history.newOwnerName}</TableCell>
+                      <TableCell>{history.newOwnerEmail}</TableCell>
+                      <TableCell>
                         {history.createdAt.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {(item.ownershipHistory ?? []).length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="text-center text-muted-foreground px-4 py-2"
-                      >
-                        No ownership transfers yet
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">
+                      {item.originalOwnerName}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.originalOwnerEmail}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.createdAt.toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
