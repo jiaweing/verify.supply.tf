@@ -101,14 +101,12 @@ export const ownershipTransfers = pgTable("ownership_transfers", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const userPreferences = pgTable("user_preferences", {
+export const userOwnershipVisibility = pgTable("user_ownership_visibility", {
   id: serial("id").primaryKey(),
-  itemId: uuid("item_id")
-    .references(() => items.id)
-    .notNull(),
-  showOwnershipHistory: boolean("show_ownership_history")
-    .default(true)
-    .notNull(),
+  email: varchar("email", { length: 255 }).unique().notNull(),
+  visible: boolean("visible").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const globalEncryptionKeys = pgTable("global_encryption_keys", {
@@ -158,7 +156,6 @@ export const itemRelations = relations(items, ({ many, one }) => ({
   ownershipHistory: many(ownershipTransfers, {
     relationName: "ownershipHistory",
   }),
-  userPreferences: many(userPreferences),
   sessions: many(sessions),
   sku: one(skus, {
     fields: [items.sku],
@@ -185,16 +182,6 @@ export const ownershipTransfersRelations = relations(
   })
 );
 
-export const userPreferencesRelations = relations(
-  userPreferences,
-  ({ one }) => ({
-    item: one(items, {
-      fields: [userPreferences.itemId],
-      references: [items.id],
-    }),
-  })
-);
-
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   item: one(items, {
     fields: [sessions.itemId],
@@ -209,7 +196,9 @@ export type Block = InferSelectModel<typeof blocks>;
 export type Transaction = InferSelectModel<typeof transactions>;
 export type Item = InferSelectModel<typeof items>;
 export type OwnershipTransfer = InferSelectModel<typeof ownershipTransfers>;
-export type UserPreference = InferSelectModel<typeof userPreferences>;
+export type UserOwnershipVisibility = InferSelectModel<
+  typeof userOwnershipVisibility
+>;
 export type GlobalEncryptionKey = InferSelectModel<typeof globalEncryptionKeys>;
 export type Session = InferSelectModel<typeof sessions>;
 export type AuthCode = InferSelectModel<typeof authCodes>;

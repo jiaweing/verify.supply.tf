@@ -17,18 +17,12 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
               </span>
             </a>
             <nav className="flex items-center space-x-6 text-sm font-medium">
-              <a
+              {/* <a
                 href="/admin"
                 className="transition-colors hover:text-foreground/80 text-foreground"
               >
                 Items
-              </a>
-              <a
-                href="/admin/transfers"
-                className="text-foreground/60 transition-colors hover:text-foreground/80"
-              >
-                Transfers
-              </a>
+              </a> */}
             </nav>
           </div>
           <Toaster richColors position="top-center" />

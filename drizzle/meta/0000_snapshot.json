@@ -1,5 +1,5 @@
 {
-  "id": "37eefb90-8db4-4b4d-b720-2e334941ed59",
+  "id": "4d43c27b-d069-4bb6-8045-d6d014066967",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -684,8 +684,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.user_preferences": {
-      "name": "user_preferences",
+    "public.user_ownership_visibility": {
+      "name": "user_ownership_visibility",
       "schema": "",
       "columns": {
         "id": {
@@ -694,38 +694,46 @@
           "primaryKey": true,
           "notNull": true
         },
-        "item_id": {
-          "name": "item_id",
-          "type": "uuid",
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "show_ownership_history": {
-          "name": "show_ownership_history",
+        "visible": {
+          "name": "visible",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "user_preferences_item_id_items_id_fk": {
-          "name": "user_preferences_item_id_items_id_fk",
-          "tableFrom": "user_preferences",
-          "tableTo": "items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_ownership_visibility_email_unique": {
+          "name": "user_ownership_visibility_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

@@ -100,6 +100,7 @@ For any questions, contact ${supportEmail}
 <p>The owner of the following item would like to transfer ownership to you:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
 <p>To accept this transfer and take ownership of the item, click the following link:</p>

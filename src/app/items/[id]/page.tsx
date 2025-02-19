@@ -11,10 +11,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { VisibilitySection } from "@/components/visibility-section";
 import { db } from "@/db";
+import {
+  type Block,
+  type Item,
+  type OwnershipTransfer,
+  type Transaction,
+} from "@/db/schema";
 import { validateSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
 import { formatDate, formatDateTime } from "@/lib/date";
+import {
+  fetchVisibilityPreferences,
+  maskInfo,
+  shouldShowInfo,
+} from "@/lib/visibility";
 import { ChevronLeft } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -30,7 +42,13 @@ export default async function ItemVerificationPage(props: {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get("session_token")?.value;
   let isAuthenticated = false;
-  let item = null;
+  type ItemWithRelations = Item & {
+    transactions: (Transaction & { block: Block | null })[];
+    ownershipHistory: OwnershipTransfer[];
+    creationBlock: Block | null;
+    latestTransaction: (Transaction & { block: Block | null }) | null;
+  };
+  let item: ItemWithRelations | null = null;
 
   const paramsId = params.id;
 
@@ -41,10 +59,9 @@ export default async function ItemVerificationPage(props: {
       // Make sure the validated item ID matches the requested item ID
       if (validatedItemId === paramsId) {
         isAuthenticated = true;
-        item = await db.query.items.findFirst({
+        const result = await db.query.items.findFirst({
           where: (items, { eq }) => eq(items.id, paramsId),
           with: {
-            userPreferences: true,
             ownershipHistory: {
               orderBy: (history, { desc }) => [desc(history.createdAt)],
             },
@@ -61,6 +78,10 @@ export default async function ItemVerificationPage(props: {
             },
           },
         });
+
+        if (result) {
+          item = result as ItemWithRelations;
+        }
       }
     }
   }
@@ -82,7 +103,13 @@ export default async function ItemVerificationPage(props: {
 
   // Verify blockchain chain
   const chainVerification = await verifyItemChain(db, item.id);
-  const showHistory = item.userPreferences?.[0]?.showOwnershipHistory ?? true;
+  const showHistory = true;
+
+  const currentOwner = getCurrentOwner(item.transactions, item);
+  const visibilityMap = await fetchVisibilityPreferences([
+    item.originalOwnerEmail,
+    currentOwner.currentOwnerEmail,
+  ]);
 
   return (
     <div className="container max-w-4xl py-10 mx-auto space-y-6">
@@ -184,8 +211,21 @@ export default async function ItemVerificationPage(props: {
             <div>
               <dt className="font-medium">Current Owner</dt>
               <dd className="text-muted-foreground">
-                {getCurrentOwner(item.transactions, item).currentOwnerName} (
-                {getCurrentOwner(item.transactions, item).currentOwnerEmail})
+                {shouldShowInfo(
+                  getCurrentOwner(item.transactions, item).currentOwnerEmail,
+                  getCurrentOwner(item.transactions, item).currentOwnerEmail,
+                  visibilityMap
+                )
+                  ? `${
+                      getCurrentOwner(item.transactions, item).currentOwnerName
+                    } (${
+                      getCurrentOwner(item.transactions, item).currentOwnerEmail
+                    })`
+                  : `${maskInfo(
+                      getCurrentOwner(item.transactions, item).currentOwnerName
+                    )} (${maskInfo(
+                      getCurrentOwner(item.transactions, item).currentOwnerEmail
+                    )})`}
               </dd>
             </div>
             <div>
@@ -207,15 +247,17 @@ export default async function ItemVerificationPage(props: {
         <CardContent>
           <dl className="grid grid-cols-2 gap-8 text-center max-w-xl mx-auto">
             <div>
-              <dt className="font-medium">Original Owner Name</dt>
+              <dt className="font-medium">Original Owner</dt>
               <dd className="text-muted-foreground">
-                {item.originalOwnerName}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium">Original Owner Email</dt>
-              <dd className="text-muted-foreground">
-                {item.originalOwnerEmail}
+                {shouldShowInfo(
+                  item.originalOwnerEmail,
+                  getCurrentOwner(item.transactions, item).currentOwnerEmail,
+                  visibilityMap
+                )
+                  ? `${item.originalOwnerName} (${item.originalOwnerEmail})`
+                  : `${maskInfo(item.originalOwnerName)} (${maskInfo(
+                      item.originalOwnerEmail
+                    )})`}
               </dd>
             </div>
             <div>
@@ -239,11 +281,24 @@ export default async function ItemVerificationPage(props: {
       <BlockchainCard item={item} chainVerification={chainVerification} />
 
       <Card>
-        <CardHeader className="text-center">
+        <CardHeader className="text-center space-y-4">
           <CardTitle>Ownership History</CardTitle>
         </CardHeader>
         <CardContent>
-          <OwnershipTable item={item} showHistory={showHistory} />
+          {sessionToken && (
+            <div className="mb-4">
+              <VisibilitySection
+                email={
+                  getCurrentOwner(item.transactions, item).currentOwnerEmail
+                }
+              />
+            </div>
+          )}
+          <OwnershipTable
+            item={item}
+            showHistory={showHistory}
+            ownerEmail={currentOwner.currentOwnerEmail}
+          />
         </CardContent>
       </Card>
 

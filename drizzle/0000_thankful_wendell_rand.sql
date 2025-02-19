@@ -100,10 +100,13 @@ CREATE TABLE "transactions" (
 	CONSTRAINT "transactions_hash_unique" UNIQUE("hash")
 );
 --> statement-breakpoint
-CREATE TABLE "user_preferences" (
+CREATE TABLE "user_ownership_visibility" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"item_id" uuid NOT NULL,
-	"show_ownership_history" boolean DEFAULT true NOT NULL
+	"email" varchar(255) NOT NULL,
+	"visible" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "user_ownership_visibility_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 ALTER TABLE "items" ADD CONSTRAINT "items_sku_skus_code_fk" FOREIGN KEY ("sku") REFERENCES "public"."skus"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -111,5 +114,4 @@ ALTER TABLE "items" ADD CONSTRAINT "items_creation_block_id_blocks_id_fk" FOREIG
 ALTER TABLE "items" ADD CONSTRAINT "items_latest_transaction_id_transactions_id_fk" FOREIGN KEY ("latest_transaction_id") REFERENCES "public"."transactions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ownership_transfers" ADD CONSTRAINT "ownership_transfers_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_block_id_blocks_id_fk" FOREIGN KEY ("block_id") REFERENCES "public"."blocks"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_block_id_blocks_id_fk" FOREIGN KEY ("block_id") REFERENCES "public"."blocks"("id") ON DELETE no action ON UPDATE no action;
