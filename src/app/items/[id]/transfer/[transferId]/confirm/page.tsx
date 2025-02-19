@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { TransferConfirmButtons } from "@/components/transfer-confirm-buttons";
 import {
   Card,
   CardContent,
@@ -15,10 +15,9 @@ import { confirmTransfer, rejectTransfer } from "./actions";
 export default async function TransferConfirmPage({
   params,
 }: {
-  params: { id: string; transferId: string };
+  params: Promise<{ id: string; transferId: string }>;
 }) {
-  const [id, transferId] = await Promise.all([params.id, params.transferId]);
-
+  const { id, transferId } = await params;
   // Get transfer and item details
   const transfer = await db.query.ownershipTransfers.findFirst({
     where: eq(ownershipTransfers.id, transferId),
@@ -44,9 +43,9 @@ export default async function TransferConfirmPage({
       <div className="container py-10 mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-[400px]">
           <CardHeader>
-            <CardTitle>Transfer Already Processed</CardTitle>
+            <CardTitle>Transfer Completed</CardTitle>
             <CardDescription>
-              This transfer has already been confirmed.
+              This transfer has already been completed.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -62,7 +61,8 @@ export default async function TransferConfirmPage({
           <CardHeader>
             <CardTitle>Transfer Expired</CardTitle>
             <CardDescription>
-              This transfer request has expired. Please request a new transfer.
+              This transfer request has expired. Please request a new transfer
+              from the current owner.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -115,22 +115,10 @@ export default async function TransferConfirmPage({
               </div>
             </div>
           </div>
-          <div className="flex justify-center gap-4">
-            <form action={handleConfirmTransfer}>
-              <Button type="submit" className="bg-green-500 hover:bg-green-600">
-                Accept
-              </Button>
-            </form>
-            <form action={handleRejectTransfer}>
-              <Button
-                type="submit"
-                variant="outline"
-                className="text-red-500 hover:text-red-600"
-              >
-                Decline
-              </Button>
-            </form>
-          </div>
+          <TransferConfirmButtons
+            onConfirm={handleConfirmTransfer}
+            onReject={handleRejectTransfer}
+          />
         </CardContent>
       </Card>
     </div>

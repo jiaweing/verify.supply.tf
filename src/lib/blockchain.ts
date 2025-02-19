@@ -1,6 +1,6 @@
 import * as schema from "@/db/schema";
 import { createHash } from "crypto";
-import { asc, eq, type InferModel } from "drizzle-orm";
+import { asc, eq, inArray, type InferModel } from "drizzle-orm";
 import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export type DbBlock = InferModel<typeof schema.blocks>;
@@ -10,7 +10,7 @@ export type Database = PostgresJsDatabase<typeof schema>;
 function normalizeTimestamp(timestamp: string): string {
   // Ensure consistent millisecond precision by truncating to 3 decimal places
   const date = new Date(timestamp);
-  return date.toISOString().replace(/\.\d+/, ".000");
+  return date.toISOString().replace(/\.\d+Z$/, ".000Z");
 }
 
 function stableStringify(obj: unknown): string {
@@ -39,7 +39,7 @@ function stableStringify(obj: unknown): string {
   return "{" + items.join(",") + "}";
 }
 
-function hash(data: unknown): string {
+export function hash(data: unknown): string {
   return createHash("sha256").update(stableStringify(data)).digest("hex");
 }
 
@@ -157,8 +157,11 @@ export class MerkleTree {
 
       for (let i = 0; i < currentLayer.length; i += 2) {
         if (i + 1 < currentLayer.length) {
-          // Hash pair of nodes
-          const combined = currentLayer[i] + currentLayer[i + 1];
+          // Hash pair of nodes using JSON stringification for consistent ordering
+          const combined = JSON.stringify([
+            currentLayer[i],
+            currentLayer[i + 1],
+          ]);
           newLayer.push(hash(combined));
         } else {
           // Odd number of nodes, promote single node
@@ -204,9 +207,10 @@ export class MerkleTree {
 
     for (const proofElement of proof) {
       const isLeft = currentIndex % 2 === 0;
+      // Use the same JSON stringification approach as in buildTree
       const combined = isLeft
-        ? currentHash + proofElement
-        : proofElement + currentHash;
+        ? JSON.stringify([currentHash, proofElement])
+        : JSON.stringify([proofElement, currentHash]);
       currentHash = hash(combined);
       currentIndex = Math.floor(currentIndex / 2);
     }
@@ -243,7 +247,7 @@ export class Block {
   }
 
   public calculateHash(): string {
-    return hash(this.data);
+    return hash(stableStringify(this.data));
   }
 
   public getData(): BlockData {
@@ -318,64 +322,100 @@ export async function getItemTransactionHistory(
   return transactions as TransactionHistoryItem[];
 }
 
+// Get all blocks in the blockchain with their transactions
+async function getAllBlocksAndTransactions(
+  db: Database,
+  itemId: string
+): Promise<{
+  blocks: DbBlock[];
+  transactions: Map<number, DbTransaction[]>;
+  itemTransactions: DbTransaction[];
+}> {
+  // Get ALL blocks from the start of the blockchain
+  const allBlocks = await db.query.blocks.findMany({
+    orderBy: [asc(schema.blocks.blockNumber)],
+  });
+
+  if (allBlocks.length === 0) {
+    return { blocks: [], transactions: new Map(), itemTransactions: [] };
+  }
+
+  // Get transactions for ALL blocks
+  const blockTransactions = await db.query.transactions.findMany({
+    where: inArray(
+      schema.transactions.blockId,
+      allBlocks.map((b) => b.id)
+    ),
+    orderBy: [asc(schema.transactions.timestamp)],
+  });
+
+  // Filter out just the item's transactions (for item data verification)
+  const itemTransactions = blockTransactions.filter(
+    (tx) => tx.itemId === itemId
+  );
+
+  // Group all transactions by block
+  const transactionsByBlock = new Map<number, DbTransaction[]>();
+  for (const block of allBlocks) {
+    transactionsByBlock.set(
+      block.id,
+      blockTransactions.filter((tx) => tx.blockId === block.id)
+    );
+  }
+
+  return {
+    blocks: allBlocks,
+    transactions: transactionsByBlock,
+    itemTransactions,
+  };
+}
+
 export async function verifyItemChain(
   db: Database,
   itemId: string
 ): Promise<{ isValid: boolean; error?: string }> {
-  // Helper function to normalize database timestamps and transactions
-  const normalizeDbBlock = (block: DbBlock) => ({
-    ...block,
-    timestamp: normalizeTimestamp(block.timestamp.toISOString()),
-  });
+  const {
+    blocks,
+    transactions: transactionsByBlock,
+    itemTransactions,
+  } = await getAllBlocksAndTransactions(db, itemId);
 
-  const normalizeDbTransaction = (transaction: TransactionHistoryItem) => {
-    const txData = transaction.data as TransactionData;
-    return {
-      ...transaction,
-      timestamp: normalizeTimestamp(transaction.timestamp.toISOString()),
-      data: {
-        ...txData,
-        timestamp: normalizeTimestamp(txData.timestamp),
-      } as TransactionData,
-    };
-  };
-  const item = await db.query.items.findFirst({
-    where: (items, { eq }) => eq(items.id, itemId),
-    with: {
-      latestTransaction: true,
-    },
-  });
-
-  if (!item) {
-    return { isValid: false, error: "Item not found" };
+  if (blocks.length === 0) {
+    return { isValid: false, error: "No blocks found in blockchain" };
   }
 
-  const transactions = await getItemTransactionHistory(db, itemId);
+  // Verify the entire blockchain integrity from genesis block
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const blockTransactions = transactionsByBlock.get(block.id) || [];
 
-  if (transactions.length === 0) {
-    return { isValid: false, error: "No transactions found for item" };
-  }
-
-  // First verify the blockchain integrity
-  // Then verify transaction sequence and chain links
-  for (let i = 0; i < transactions.length; i++) {
-    const transaction = transactions[i];
-    const block = transaction.block;
-
-    if (!block) {
+    if (blockTransactions.length === 0) {
       return {
         isValid: false,
-        error: `Missing block for transaction ${transaction.id}`,
+        error: `No transactions found in block ${block.blockNumber}`,
       };
     }
 
-    // Create Block instance for verification with normalized timestamp and transaction
-    const normalizedBlock = normalizeDbBlock(block);
-    const normalizedTransaction = normalizeDbTransaction(transaction);
+    // Normalize timestamps for consistent hashing
+    const normalizedBlock = {
+      ...block,
+      timestamp: normalizeTimestamp(block.timestamp.toISOString()),
+    };
+
+    const normalizedTransactions = blockTransactions.map((tx) => ({
+      ...tx,
+      timestamp: normalizeTimestamp(tx.timestamp.toISOString()),
+      data: {
+        ...(tx.data as TransactionData),
+        timestamp: normalizeTimestamp((tx.data as TransactionData).timestamp),
+      },
+    }));
+
+    // Create Block instance for verification
     const blockInstance = new Block(
       normalizedBlock.blockNumber,
       normalizedBlock.previousHash,
-      [normalizedTransaction.data as TransactionData],
+      normalizedTransactions.map((tx) => tx.data as TransactionData),
       normalizedBlock.timestamp,
       normalizedBlock.nonce
     );
@@ -399,28 +439,45 @@ export async function verifyItemChain(
 
     // Verify chain link (except genesis block)
     if (i > 0) {
-      const previousBlock = transactions[i - 1].block;
-      if (!previousBlock) {
-        return {
-          isValid: false,
-          error: `Missing previous block at block ${block.blockNumber}`,
-        };
-      }
-
-      if (block.previousHash !== previousBlock.hash) {
+      if (block.previousHash !== blocks[i - 1].hash) {
         return {
           isValid: false,
           error: `Broken chain link at block ${block.blockNumber}`,
         };
       }
     }
+
+    // Verify all transactions in this block
+    for (let txIndex = 0; txIndex < blockTransactions.length; txIndex++) {
+      const isValidTx = blockInstance.verifyTransaction(txIndex);
+      if (!isValidTx) {
+        return {
+          isValid: false,
+          error: `Invalid transaction ${blockTransactions[txIndex].id} in block ${block.blockNumber}`,
+        };
+      }
+    }
+  }
+
+  // Verify the specific item's data if it exists in the chain
+  if (itemTransactions.length === 0) {
+    return { isValid: false, error: "No transactions found for item" };
+  }
+
+  const item = await db.query.items.findFirst({
+    where: eq(schema.items.id, itemId),
+  });
+
+  if (!item) {
+    return { isValid: false, error: "Item not found" };
   }
 
   // Verify item data matches latest transaction
-  const latestTx = transactions[transactions.length - 1];
+  const latestTx = itemTransactions[itemTransactions.length - 1];
   if (!latestTx) {
     return { isValid: false, error: "No transactions found for item" };
   }
+
   const latestTxData = latestTx.data as TransactionData;
 
   // The actual item data should match what's recorded in the latest transaction

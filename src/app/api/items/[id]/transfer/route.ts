@@ -1,15 +1,17 @@
 import { db } from "@/db";
 import { blocks, items, ownershipTransfers, transactions } from "@/db/schema";
 import { env } from "@/env.mjs";
-import { validateSession } from "@/lib/auth";
+import { deleteSessionByItemId, validateSession } from "@/lib/auth";
 import {
   Block,
-  TransactionData,
   getCurrentOwner,
   getItemTransactionHistory,
+  hash,
+  TransactionData,
+  verifyItemChain,
 } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq, not, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
@@ -64,6 +66,16 @@ export async function POST(
       createdAt: item.createdAt,
     });
 
+    // Prevent transferring to self
+    if (newOwnerEmail === currentOwnership.currentOwnerEmail) {
+      return Response.json(
+        {
+          error: "You are already the owner. You cannot transfer to yourself. ",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if there's already a pending transfer
     const existingTransfer = await db.query.ownershipTransfers.findFirst({
       where: eq(ownershipTransfers.itemId, authenticatedItemId),
@@ -80,6 +92,9 @@ export async function POST(
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + TRANSFER_EXPIRY_HOURS);
 
+    // Generate normalized timestamp for consistency
+    const timestampISO = new Date().toISOString().replace(/\.\d+Z$/, ".000Z");
+
     const createdTransfer = await db
       .insert(ownershipTransfers)
       .values({
@@ -88,6 +103,7 @@ export async function POST(
         newOwnerEmail,
         newOwnerName,
         expiresAt,
+        createdAt: new Date(timestampISO), // Explicitly set UTC timestamp
       })
       .returning();
 
@@ -152,16 +168,41 @@ export async function DELETE(
       return Response.json({ error: "Unauthorized access" }, { status: 403 });
     }
 
+    const { transferId } = await request.json();
+
+    if (!transferId) {
+      return Response.json(
+        { error: "Transfer ID is required" },
+        { status: 400 }
+      );
+    }
+
     // Find pending transfer for this item
     const pendingTransfer = await db.query.ownershipTransfers.findFirst({
-      where: eq(ownershipTransfers.itemId, authenticatedItemId),
+      where: and(
+        eq(ownershipTransfers.id, transferId),
+        eq(ownershipTransfers.itemId, authenticatedItemId)
+      ),
     });
 
     if (!pendingTransfer || pendingTransfer.isConfirmed) {
       return Response.json(
-        { error: "No pending transfer found" },
-        { status: 404 }
+        {
+          error: !pendingTransfer
+            ? "No pending transfer found"
+            : "Cannot cancel a confirmed transfer",
+        },
+        { status: 400 }
       );
+    }
+
+    // Get item details for the email
+    const item = await db.query.items.findFirst({
+      where: eq(items.id, authenticatedItemId),
+    });
+
+    if (!item) {
+      return Response.json({ error: "Item not found" }, { status: 404 });
     }
 
     // Delete the transfer request
@@ -169,7 +210,19 @@ export async function DELETE(
       .delete(ownershipTransfers)
       .where(eq(ownershipTransfers.id, pendingTransfer.id));
 
-    return Response.json({ message: "Transfer cancelled successfully" });
+    // Notify the new owner that the transfer was cancelled
+    await sendEmail({
+      to: pendingTransfer.newOwnerEmail,
+      type: "transfer-cancelled",
+      data: {
+        itemDetails: {
+          serialNumber: item.serialNumber,
+          sku: item.sku,
+        },
+      },
+    });
+
+    return Response.json({ message: "Transfer cancelled" });
   } catch (error) {
     console.error("Error in DELETE /api/items/[id]/transfer:", error);
     return Response.json(
@@ -229,7 +282,6 @@ export async function PUT(
 
     if (action === "confirm") {
       // Get current item details
-      // Get full item details and transaction history
       const item = await db.query.items.findFirst({
         where: eq(items.id, transfer.itemId),
         with: {
@@ -241,30 +293,40 @@ export async function PUT(
         },
       });
 
-      const txHistory = await getItemTransactionHistory(db, transfer.itemId);
-      const currentOwnership = getCurrentOwner(txHistory, {
-        originalOwnerName: item!.originalOwnerName,
-        originalOwnerEmail: item!.originalOwnerEmail,
-        createdAt: item!.createdAt,
-      });
-
       if (!item) {
         return Response.json({ error: "Item not found" }, { status: 404 });
       }
 
+      const txHistory = await getItemTransactionHistory(db, transfer.itemId);
+      const currentOwnership = getCurrentOwner(txHistory, {
+        originalOwnerName: item.originalOwnerName,
+        originalOwnerEmail: item.originalOwnerEmail,
+        createdAt: item.createdAt,
+      });
+
+      // Get any pending transactions that haven't been added to a block yet
+      const pendingTransactions = await db.query.transactions.findMany({
+        where: and(
+          sql`${transactions.blockId} IS NULL`,
+          not(eq(transactions.itemId, transfer.itemId)) // Exclude current item's transactions
+        ),
+        orderBy: [asc(transactions.timestamp)],
+        limit: 9, // Limit to 9 to make room for our new transaction (total 10 per block)
+      });
+
       // Get the last block for chain linking
       const lastBlock = await db.query.blocks.findFirst({
-        orderBy: (blocks, { desc }) => [desc(blocks.blockNumber)],
+        orderBy: [desc(blocks.blockNumber)],
       });
 
       const nextBlockNumber = (lastBlock?.blockNumber ?? 0) + 1;
       // Generate normalized timestamp once to use consistently
-      const timestampISO = new Date().toISOString().replace(/\.\d+/, ".000");
+      const timestampISO = new Date().toISOString().replace(/\.\d+Z$/, ".000Z");
       const timestamp = new Date(timestampISO); // For DB
 
       const transactionData: TransactionData = {
         type: "transfer",
-        itemId: item!.id,
+        itemId: item.id,
         timestamp: timestampISO,
         data: {
           from: {
@@ -276,41 +338,51 @@ export async function PUT(
             email: transfer.newOwnerEmail,
           },
           item: {
-            id: item!.id,
-            serialNumber: item!.serialNumber,
-            sku: item!.sku,
-            mintNumber: item!.mintNumber,
-            weight: item!.weight,
-            nfcSerialNumber: item!.nfcSerialNumber,
-            orderId: item!.orderId,
-            originalOwnerName: item!.originalOwnerName,
-            originalOwnerEmail: item!.originalOwnerEmail,
-            originalPurchaseDate: item!.originalPurchaseDate,
-            purchasedFrom: item!.purchasedFrom,
-            manufactureDate: item!.manufactureDate,
-            producedAt: item!.producedAt,
-            createdAt: item!.createdAt,
-            blockchainVersion: item!.blockchainVersion,
-            globalKeyVersion: item!.globalKeyVersion,
-            nfcLink: item!.nfcLink, // Keep the original NFC link unchanged
+            id: item.id,
+            serialNumber: item.serialNumber,
+            sku: item.sku,
+            mintNumber: item.mintNumber,
+            weight: item.weight,
+            nfcSerialNumber: item.nfcSerialNumber,
+            orderId: item.orderId,
+            originalOwnerName: item.originalOwnerName,
+            originalOwnerEmail: item.originalOwnerEmail,
+            originalPurchaseDate: item.originalPurchaseDate,
+            purchasedFrom: item.purchasedFrom,
+            manufactureDate: item.manufactureDate,
+            producedAt: item.producedAt,
+            createdAt: item.createdAt,
+            blockchainVersion: item.blockchainVersion,
+            globalKeyVersion: item.globalKeyVersion,
+            nfcLink: item.nfcLink,
           },
         },
       };
+
+      // Combine pending transactions with our new transaction
+      const blockTransactions = [
+        ...pendingTransactions.map((tx) => tx.data as TransactionData),
+        transactionData,
+      ];
 
       // Create new block using the same timestamp
       const block = new Block(
         nextBlockNumber,
         lastBlock?.hash ?? "0".repeat(64),
-        [transactionData],
+        blockTransactions,
         timestampISO
       );
 
+      // Calculate block hash after all data is set
       const blockHash = block.calculateHash();
       const merkleRoot = block.getMerkleTree().getRoot();
 
+      let newBlock: typeof blocks.$inferSelect;
+      let newTransaction: typeof transactions.$inferSelect;
+
       await db.transaction(async (tx) => {
         // Create block record
-        const [newBlock] = await tx
+        [newBlock] = await tx
           .insert(blocks)
           .values({
             blockNumber: nextBlockNumber,
@@ -322,30 +394,43 @@ export async function PUT(
           })
           .returning();
 
-        // Since we're using MerkleTree for verification, use merkleRoot as transaction hash
-        const merkleTree = block.getMerkleTree();
-        const transactionHash = merkleTree.getRoot();
+        // Process all transactions in the block
+        for (let i = 0; i < blockTransactions.length; i++) {
+          const txData = blockTransactions[i];
+          const transactionHash = hash(txData);
 
-        // Create transaction record
-        const [newTransaction] = await tx
-          .insert(transactions)
-          .values({
-            blockId: newBlock.id,
-            transactionType: "transfer",
-            itemId: item.id,
-            data: transactionData,
-            timestamp,
-            hash: transactionHash,
-          })
-          .returning();
+          if (i < pendingTransactions.length) {
+            // Update existing transaction with block info
+            await tx
+              .update(transactions)
+              .set({
+                blockId: newBlock.id,
+                hash: transactionHash,
+              })
+              .where(eq(transactions.id, pendingTransactions[i].id));
+          } else {
+            // Create new transaction for our transfer
+            [newTransaction] = await tx
+              .insert(transactions)
+              .values({
+                blockId: newBlock.id,
+                transactionType: "transfer",
+                itemId: item.id,
+                data: transactionData,
+                timestamp,
+                hash: transactionHash,
+              })
+              .returning();
 
-        // Only update the latest transaction ID since ownership is tracked in transactions
-        await tx
-          .update(items)
-          .set({
-            latestTransactionId: newTransaction.id, // Don't update nfcLink, keep it as original
-          })
-          .where(eq(items.id, transfer.itemId));
+            // Update item with latest transaction
+            await tx
+              .update(items)
+              .set({
+                latestTransactionId: newTransaction.id,
+              })
+              .where(eq(items.id, transfer.itemId));
+          }
+        }
 
         // Mark transfer as confirmed
         await tx
@@ -353,6 +438,51 @@ export async function PUT(
           .set({ isConfirmed: true })
           .where(eq(ownershipTransfers.id, transfer.id));
       });
+
+      // Verify chain integrity after the new block is added
+      const verifyResult = await verifyItemChain(db, transfer.itemId);
+      if (!verifyResult.isValid) {
+        // Rollback in proper order to handle foreign key constraints
+        await db.transaction(async (tx) => {
+          // First find all transactions that reference this block
+          const blockTransactions = await tx
+            .select()
+            .from(transactions)
+            .where(eq(transactions.blockId, newBlock.id));
+
+          // Update items to remove references to these transactions
+          for (const transaction of blockTransactions) {
+            await tx
+              .update(items)
+              .set({ latestTransactionId: null })
+              .where(eq(items.latestTransactionId, transaction.id));
+          }
+
+          // Delete the transactions
+          await tx
+            .delete(transactions)
+            .where(eq(transactions.blockId, newBlock.id));
+
+          // Now we can safely delete the block
+          await tx.delete(blocks).where(eq(blocks.id, newBlock.id));
+
+          // Reset transfer confirmation
+          await tx
+            .update(ownershipTransfers)
+            .set({ isConfirmed: false })
+            .where(eq(ownershipTransfers.id, transfer.id));
+        });
+
+        console.error("Blockchain verification failed:", {
+          error: verifyResult.error,
+          transferId,
+          itemId: transfer.itemId,
+        });
+        return Response.json({ error: verifyResult.error }, { status: 500 });
+      }
+
+      // Invalidate original owner's session
+      await deleteSessionByItemId(transfer.itemId);
 
       // Send confirmation emails to both the new owner and original owner
       await Promise.all([
@@ -385,10 +515,37 @@ export async function PUT(
 
       return Response.json({ message: "Transfer confirmed successfully" });
     } else {
+      // Get item details for the email notification
+      const item = await db.query.items.findFirst({
+        where: eq(items.id, transfer.itemId),
+      });
+
+      if (!item) {
+        return Response.json({ error: "Item not found" }, { status: 404 });
+      }
+
+      // Send email to current owner about the rejection
+      await sendEmail({
+        to: transfer.currentOwnerEmail,
+        type: "transfer-declined",
+        data: {
+          itemDetails: {
+            serialNumber: item.serialNumber,
+            sku: item.sku,
+          },
+          newOwnerEmail: transfer.newOwnerEmail,
+          newOwnerName: transfer.newOwnerName,
+        },
+      });
+
       // Delete the transfer request when rejected
       await db
         .delete(ownershipTransfers)
         .where(eq(ownershipTransfers.id, transfer.id));
+
+      console.log(
+        `Transfer ${transfer.id} rejected and current owner ${transfer.currentOwnerEmail} notified`
+      );
 
       return Response.json({ message: "Transfer rejected successfully" });
     }

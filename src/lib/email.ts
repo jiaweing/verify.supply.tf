@@ -19,7 +19,9 @@ export type EmailType =
   | "verify"
   | "transfer-request"
   | "transfer-confirmed"
-  | "transfer-completed";
+  | "transfer-completed"
+  | "transfer-cancelled"
+  | "transfer-declined";
 
 interface EmailTemplate<T> {
   subject: string;
@@ -192,6 +194,91 @@ For any questions, contact ${supportEmail}
 <p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
     `,
   },
+  "transfer-cancelled": {
+    subject: "Item Transfer Cancelled",
+    generateText: ({
+      itemDetails,
+    }: {
+      itemDetails: {
+        serialNumber: string;
+        sku: string;
+      };
+    }) => `
+The pending transfer for the following item has been cancelled by the owner:
+
+Serial Number: ${itemDetails.serialNumber}
+SKU: ${itemDetails.sku}
+
+No further action is required.
+
+For any questions, contact ${supportEmail}
+    `,
+    generateHtml: ({
+      itemDetails,
+    }: {
+      itemDetails: {
+        serialNumber: string;
+        sku: string;
+      };
+    }) => `
+<h2>Item Transfer Cancelled</h2>
+<p>The pending transfer for the following item has been cancelled by the owner:</p>
+<div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
+  <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>SKU:</strong> ${itemDetails.sku}</p>
+</div>
+<p>No further action is required.</p>
+<p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
+    `,
+  },
+  "transfer-declined": {
+    subject: "Item Transfer Declined",
+    generateText: ({
+      itemDetails,
+      newOwnerEmail,
+      newOwnerName,
+    }: {
+      itemDetails: {
+        serialNumber: string;
+        sku: string;
+      };
+      newOwnerEmail: string;
+      newOwnerName: string;
+    }) => `
+The following transfer request has been declined by the recipient:
+
+Serial Number: ${itemDetails.serialNumber}
+SKU: ${itemDetails.sku}
+
+Declined by: ${newOwnerName} (${newOwnerEmail})
+
+No further action is required.
+
+For any questions, contact ${supportEmail}
+    `,
+    generateHtml: ({
+      itemDetails,
+      newOwnerEmail,
+      newOwnerName,
+    }: {
+      itemDetails: {
+        serialNumber: string;
+        sku: string;
+      };
+      newOwnerEmail: string;
+      newOwnerName: string;
+    }) => `
+<h2>Item Transfer Declined</h2>
+<p>The following transfer request has been declined by the recipient:</p>
+<div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
+  <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>SKU:</strong> ${itemDetails.sku}</p>
+  <p><strong>Declined by:</strong> ${newOwnerName} (${newOwnerEmail})</p>
+</div>
+<p>No further action is required.</p>
+<p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
+    `,
+  },
 };
 
 interface VerifyEmailData {
@@ -225,11 +312,29 @@ interface TransferCompletedEmailData {
   newOwnerEmail: string;
 }
 
+interface TransferCancelledEmailData {
+  itemDetails: {
+    serialNumber: string;
+    sku: string;
+  };
+}
+
+interface TransferDeclinedEmailData {
+  itemDetails: {
+    serialNumber: string;
+    sku: string;
+  };
+  newOwnerEmail: string;
+  newOwnerName: string;
+}
+
 type EmailData = {
   verify: VerifyEmailData;
   "transfer-request": TransferRequestEmailData;
   "transfer-confirmed": TransferConfirmedEmailData;
   "transfer-completed": TransferCompletedEmailData;
+  "transfer-cancelled": TransferCancelledEmailData;
+  "transfer-declined": TransferDeclinedEmailData;
 };
 
 export async function sendEmail<T extends EmailType>({

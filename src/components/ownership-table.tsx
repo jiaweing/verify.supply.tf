@@ -7,6 +7,7 @@ import {
 } from "@/db/schema";
 import { TransactionData } from "@/lib/blockchain";
 import { formatDateTime } from "@/lib/date";
+import { Loader2 } from "lucide-react";
 import { CancelTransferButton } from "./cancel-transfer-button";
 import {
   Table,
@@ -61,13 +62,18 @@ export function OwnershipTable({
           .filter((tx) => tx.transactionType === "transfer")
           .map((tx) => {
             const data = tx.data as TransactionData;
+            const isLatestTransfer =
+              tx ===
+              item.transactions
+                .filter((t) => t.transactionType === "transfer")
+                .at(-1);
             return (
               <TableRow key={tx.id}>
                 <TableCell>{data.data.to.name}</TableCell>
                 <TableCell>{data.data.to.email}</TableCell>
                 <TableCell>{formatDateTime(tx.timestamp)}</TableCell>
                 <TableCell>
-                  <Badge variant="default">Current</Badge>
+                  {isLatestTransfer && <Badge variant="default">Current</Badge>}
                 </TableCell>
                 <TableCell></TableCell>
               </TableRow>
@@ -85,10 +91,16 @@ export function OwnershipTable({
               <TableCell>{history.newOwnerEmail}</TableCell>
               <TableCell>{formatDateTime(history.createdAt)}</TableCell>
               <TableCell>
-                <Badge variant="outline">Pending</Badge>
+                <Badge variant="outline">
+                  <Loader2 className="animate-spin text-muted-foreground h-3 w-3 mr-1" />
+                  Pending
+                </Badge>
               </TableCell>
               <TableCell>
-                <CancelTransferButton itemId={item.id} />
+                <CancelTransferButton
+                  itemId={item.id}
+                  transferId={history.id}
+                />
               </TableCell>
             </TableRow>
           ))}

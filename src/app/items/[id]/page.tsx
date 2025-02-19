@@ -20,7 +20,13 @@ import { db } from "@/db";
 import { validateSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
 import { formatDate, formatDateTime } from "@/lib/date";
-import { Link as Chain, ChevronLeft, Verified, X } from "lucide-react";
+import {
+  AlertCircle,
+  Link as Chain,
+  ChevronLeft,
+  Verified,
+  X,
+} from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -248,12 +254,19 @@ export default async function ItemVerificationPage(props: {
             <Popover>
               <PopoverTrigger asChild>
                 {chainVerification.isValid ? (
-                  <Badge variant="outline" className="text-green-500">
-                    <Verified className="h-4 w-4 mr-1" /> Valid
+                  <Badge
+                    variant="outline"
+                    className=" border-green-500 bg-green-100 text-green-500"
+                  >
+                    <Verified className="h-4 w-4 mr-1 fill-green-500 text-background" />{" "}
+                    Valid
                   </Badge>
                 ) : (
-                  <Badge variant="destructive">
-                    <X className="h-4 w-4 mr-1" /> Invalid chain detected
+                  <Badge
+                    variant="outline"
+                    className=" border-red-500 bg-red-100 text-red-500"
+                  >
+                    <AlertCircle className="h-4 w-4 mr-1" /> Invalid
                   </Badge>
                 )}
               </PopoverTrigger>
@@ -281,23 +294,13 @@ export default async function ItemVerificationPage(props: {
                               "Item data does not match"
                             ) ? (
                               <>
-                                <span className="font-medium text-red-600">
-                                  Data Tampering Detected
-                                </span>
-                                <br />
                                 The current owner information has been modified
                                 outside of proper blockchain transactions. This
                                 indicates unauthorized changes to the
                                 item&apos;s data.
                               </>
                             ) : (
-                              <>
-                                <span className="font-medium text-red-600">
-                                  Blockchain Error:
-                                </span>
-                                <br />
-                                {chainVerification.error}
-                              </>
+                              <>{chainVerification.error}</>
                             )
                           ) : (
                             "Unknown verification error"

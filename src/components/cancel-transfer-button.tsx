@@ -8,9 +8,13 @@ import { Button } from "./ui/button";
 
 interface CancelTransferButtonProps {
   itemId: string;
+  transferId: string;
 }
 
-export function CancelTransferButton({ itemId }: CancelTransferButtonProps) {
+export function CancelTransferButton({
+  itemId,
+  transferId,
+}: CancelTransferButtonProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -20,13 +24,17 @@ export function CancelTransferButton({ itemId }: CancelTransferButtonProps) {
     try {
       const res = await fetch(`/api/items/${itemId}/transfer`, {
         method: "DELETE",
+        body: JSON.stringify({
+          transferId,
+        }),
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!res.ok) {
         throw new Error("Failed to cancel transfer");
       }
 
-      toast.success("Transfer cancelled successfully");
+      toast.success("Transfer cancelled");
       router.refresh();
     } catch (error) {
       console.error("Failed to cancel transfer:", error);

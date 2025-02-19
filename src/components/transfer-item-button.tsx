@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Send } from "lucide-react";
+import { AlertCircle, Loader2, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
@@ -44,7 +44,8 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to transfer item");
+        const data = await res.json();
+        throw new Error(data.error || "Failed to transfer item");
       }
 
       setIsOpen(false);
@@ -54,7 +55,9 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
       router.refresh();
     } catch (error) {
       console.error("Failed to transfer item:", error);
-      toast.error("Failed to transfer item");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to transfer item"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +74,6 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
         <DialogHeader>
           <DialogTitle>Invite New Owner</DialogTitle>
           <DialogDescription>
-            Enter the details of the person you want to transfer this item to.
             They will receive an email invitation to accept ownership.
           </DialogDescription>
         </DialogHeader>
@@ -107,6 +109,12 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
               "Transfer"
             )}
           </Button>
+          <p className="text-muted-foreground mt-2 justify-center text-xs items-center flex flex-row gap-2">
+            <AlertCircle className="w-4 h-4 text-destructive" />{" "}
+            <div>
+              This is irreversible! Please double check before transferring.
+            </div>
+          </p>
         </form>
       </DialogContent>
     </Dialog>

@@ -139,9 +139,7 @@ export function VerifyForm({
 
         if (!res.ok) {
           const error = await res.json();
-          throw new Error(
-            error.message || "Failed to request verification code"
-          );
+          throw new Error(error.error || "Failed to request verification code");
         }
 
         toast.success("Check your email for the verification code");
@@ -203,7 +201,7 @@ export function VerifyForm({
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to resend code");
+        throw new Error(error.error || "Failed to resend code");
       }
 
       toast.success("New verification code sent to your email");

@@ -115,6 +115,10 @@ export async function deleteSession(sessionToken: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
 }
 
+export async function deleteSessionByItemId(itemId: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.itemId, itemId));
+}
+
 // Types
 export type AuthCode = z.infer<typeof authCodeSchema>;
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
