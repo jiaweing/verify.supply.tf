@@ -1,8 +1,10 @@
+import { BlockchainCard } from "@/components/blockchain-card";
 import { OwnershipTable } from "@/components/ownership-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { verifyItemChain } from "@/lib/blockchain";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -143,40 +145,11 @@ export default async function ItemPage(props: {
           </CardContent>
         </Card>
 
-        {/* Blockchain Data */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Blockchain Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-4">
-              <div>
-                <dt className="font-medium">Creation Block Hash</dt>
-                <dd className="text-muted-foreground font-mono text-sm break-all">
-                  {item.creationBlock?.hash}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium">Latest Block Hash</dt>
-                <dd className="text-muted-foreground font-mono text-sm break-all">
-                  {item.latestTransaction?.block?.hash}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium">Previous Block Hash</dt>
-                <dd className="text-muted-foreground font-mono text-sm break-all">
-                  {item.latestTransaction?.block?.previousHash}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium">Created At</dt>
-                <dd className="text-muted-foreground">
-                  {formatDateTime(item.createdAt)}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+        <BlockchainCard
+          item={item}
+          chainVerification={await verifyItemChain(db, item.id)}
+          centered={false}
+        />
 
         {/* NFC Data */}
         <Card>
