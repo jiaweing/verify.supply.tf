@@ -21,11 +21,24 @@ export const adminUsers = pgTable("admin_users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Series table
+export const series = pgTable("series", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  seriesNumber: varchar("series_number", { length: 64 }).unique().notNull(),
+  totalPieces: integer("total_pieces").notNull(),
+  currentMintNumber: integer("current_mint_number").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // SKU tracking table
 export const skus = pgTable("skus", {
   id: serial("id").primaryKey(),
   code: varchar("code", { length: 64 }).unique().notNull(),
-  currentMintNumber: integer("current_mint_number").default(0).notNull(),
+  seriesId: integer("series_id")
+    .notNull()
+    .references(() => series.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -202,3 +215,17 @@ export type UserOwnershipVisibility = InferSelectModel<
 export type GlobalEncryptionKey = InferSelectModel<typeof globalEncryptionKeys>;
 export type Session = InferSelectModel<typeof sessions>;
 export type AuthCode = InferSelectModel<typeof authCodes>;
+export type Series = InferSelectModel<typeof series>;
+
+// Add series relation to SKU
+export const skuRelations = relations(skus, ({ one }) => ({
+  series: one(series, {
+    fields: [skus.seriesId],
+    references: [series.id],
+  }),
+}));
+
+// Add SKU relation to series
+export const seriesRelations = relations(series, ({ many }) => ({
+  skus: many(skus),
+}));

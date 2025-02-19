@@ -3,7 +3,7 @@ import {
   blocks,
   globalEncryptionKeys,
   items,
-  skus,
+  series,
   transactions,
 } from "@/db/schema";
 import { env } from "@/env.mjs";
@@ -25,6 +25,7 @@ const itemSchema = z.object({
   purchasedFrom: z.string().min(1, "Vendor name is required"),
   manufactureDate: z.string().min(1, "Manufacture date is required"),
   producedAt: z.string().min(1, "Production location is required"),
+  seriesId: z.string().min(1, "Series ID is required"),
 });
 
 export async function POST(request: Request) {
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       purchasedFrom: formData.get("purchasedFrom"),
       manufactureDate: formData.get("manufactureDate"),
       producedAt: formData.get("producedAt"),
+      seriesId: formData.get("seriesId"),
     };
 
     // Validate input
@@ -121,32 +123,33 @@ export async function POST(request: Request) {
       })) as Buffer;
     }
 
-    // Find or create SKU and get next mint number
-    let sku = await db.query.skus.findFirst({
-      where: eq(skus.code, parsed.data.sku),
+    // Find the series
+    const seriesRecord = await db.query.series.findFirst({
+      where: eq(series.id, Number(parsed.data.seriesId)),
     });
 
-    if (!sku) {
-      const [newSku] = await db
-        .insert(skus)
-        .values({
-          code: parsed.data.sku,
-          currentMintNumber: 1,
-        })
-        .returning();
-      sku = newSku;
-    } else {
-      [sku] = await db
-        .update(skus)
-        .set({
-          currentMintNumber: sku.currentMintNumber + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(skus.code, parsed.data.sku))
-        .returning();
+    if (!seriesRecord) {
+      return Response.json({ error: "Series not found" }, { status: 404 });
     }
 
-    const mintNumber = sku.currentMintNumber.toString().padStart(4, "0");
+    // Check if we've reached the series limit
+    if (seriesRecord.currentMintNumber >= seriesRecord.totalPieces) {
+      return Response.json({ error: "Series limit reached" }, { status: 400 });
+    }
+
+    // Update series mint number
+    const [updatedSeries] = await db
+      .update(series)
+      .set({
+        currentMintNumber: seriesRecord.currentMintNumber + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(series.id, seriesRecord.id))
+      .returning();
+
+    const mintNumber = updatedSeries.currentMintNumber
+      .toString()
+      .padStart(4, "0");
     const itemId = crypto.randomUUID();
 
     // Generate normalized timestamp once to use consistently

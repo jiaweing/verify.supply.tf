@@ -71,6 +71,17 @@ CREATE TABLE "ownership_transfers" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "series" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"series_number" varchar(64) NOT NULL,
+	"total_pieces" integer NOT NULL,
+	"current_mint_number" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "series_series_number_unique" UNIQUE("series_number")
+);
+--> statement-breakpoint
 CREATE TABLE "sessions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"item_id" uuid NOT NULL,
@@ -83,7 +94,7 @@ CREATE TABLE "sessions" (
 CREATE TABLE "skus" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"code" varchar(64) NOT NULL,
-	"current_mint_number" integer DEFAULT 0 NOT NULL,
+	"series_id" integer NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "skus_code_unique" UNIQUE("code")
@@ -103,7 +114,7 @@ CREATE TABLE "transactions" (
 CREATE TABLE "user_ownership_visibility" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"email" varchar(255) NOT NULL,
-	"visible" boolean DEFAULT true NOT NULL,
+	"visible" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "user_ownership_visibility_email_unique" UNIQUE("email")
@@ -114,4 +125,5 @@ ALTER TABLE "items" ADD CONSTRAINT "items_creation_block_id_blocks_id_fk" FOREIG
 ALTER TABLE "items" ADD CONSTRAINT "items_latest_transaction_id_transactions_id_fk" FOREIGN KEY ("latest_transaction_id") REFERENCES "public"."transactions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ownership_transfers" ADD CONSTRAINT "ownership_transfers_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "skus" ADD CONSTRAINT "skus_series_id_series_id_fk" FOREIGN KEY ("series_id") REFERENCES "public"."series"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_block_id_blocks_id_fk" FOREIGN KEY ("block_id") REFERENCES "public"."blocks"("id") ON DELETE no action ON UPDATE no action;

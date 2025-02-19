@@ -4,6 +4,7 @@ import { AlertCircle, Loader2, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
+import { env } from "../env.mjs";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -32,16 +33,19 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/items/${itemId}/transfer`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          newOwnerName,
-          newOwnerEmail,
-        }),
-      });
+      const res = await fetch(
+        `${env.NEXT_PUBLIC_APP_URL}/api/items/${itemId}/transfer`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            newOwnerName,
+            newOwnerEmail,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const data = await res.json();

@@ -4,6 +4,7 @@ import { Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
+import { env } from "../env.mjs";
 import { Button } from "./ui/button";
 
 interface CancelTransferButtonProps {
@@ -22,13 +23,16 @@ export function CancelTransferButton({
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/items/${itemId}/transfer`, {
-        method: "DELETE",
-        body: JSON.stringify({
-          transferId,
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch(
+        `${env.NEXT_PUBLIC_APP_URL}/api/items/${itemId}/transfer`,
+        {
+          method: "DELETE",
+          body: JSON.stringify({
+            transferId,
+          }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       if (!res.ok) {
         throw new Error("Failed to cancel transfer");
