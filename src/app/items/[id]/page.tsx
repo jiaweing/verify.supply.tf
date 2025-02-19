@@ -258,7 +258,7 @@ export default async function ItemVerificationPage(props: {
                     variant="outline"
                     className=" border-green-500 bg-green-100 text-green-500"
                   >
-                    <Verified className="h-4 w-4 mr-1 fill-green-500 text-background" />{" "}
+                    <Verified className="h-4 w-4 mr-1 fill-green-500 text-white" />{" "}
                     Valid
                   </Badge>
                 ) : (

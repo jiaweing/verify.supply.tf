@@ -65,6 +65,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       confirmUrl: string;
     }) => `
@@ -91,6 +92,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       confirmUrl: string;
     }) => `
@@ -115,15 +117,17 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       viewUrl: string;
     }) => `
 You have successfully taken ownership of the following item:
 
 Serial Number: ${itemDetails.serialNumber}
+Mint Number: #${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
-To view your item details, click the following link:
+To view your item details, scan the item's NFC tag with your phone or click the following link:
 ${viewUrl}
 
 For any questions, contact ${supportEmail}
@@ -135,6 +139,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       viewUrl: string;
     }) => `
@@ -142,10 +147,14 @@ For any questions, contact ${supportEmail}
 <p>You have successfully taken ownership of the following item:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
-<p>To view your item details, click the following link:</p>
-<p><a href="${viewUrl}" style="display: inline-block; background: #0070f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Item</a></p>
+<p>To view your item details:</p>
+<ul style="margin: 16px 0;">
+  <li>Scan the item's NFC tag with your phone</li>
+  <li>Or click this link: <a href="${viewUrl}" style="display: inline-block; background: #0070f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Item</a></li>
+</ul>
 <p>For any questions, contact <a href="mailto:${supportEmail}">${supportEmail}</a></p>
     `,
   },
@@ -159,6 +168,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       newOwnerName: string;
       newOwnerEmail: string;
@@ -166,6 +176,7 @@ For any questions, contact ${supportEmail}
 The transfer of your item has been completed:
 
 Serial Number: ${itemDetails.serialNumber}
+Mint Number: #${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 New Owner: ${newOwnerName} (${newOwnerEmail})
@@ -180,6 +191,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       newOwnerName: string;
       newOwnerEmail: string;
@@ -188,6 +200,7 @@ For any questions, contact ${supportEmail}
 <p>The transfer of your item has been completed:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
   <p><strong>New Owner:</strong> ${newOwnerName} (${newOwnerEmail})</p>
 </div>
@@ -202,11 +215,13 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
     }) => `
 The pending transfer for the following item has been cancelled by the owner:
 
 Serial Number: ${itemDetails.serialNumber}
+Mint Number: #${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 No further action is required.
@@ -219,12 +234,14 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
     }) => `
 <h2>Item Transfer Cancelled</h2>
 <p>The pending transfer for the following item has been cancelled by the owner:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
 <p>No further action is required.</p>
@@ -241,6 +258,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       newOwnerEmail: string;
       newOwnerName: string;
@@ -248,6 +266,7 @@ For any questions, contact ${supportEmail}
 The following transfer request has been declined by the recipient:
 
 Serial Number: ${itemDetails.serialNumber}
+Mint Number: #${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 Declined by: ${newOwnerName} (${newOwnerEmail})
@@ -264,6 +283,7 @@ For any questions, contact ${supportEmail}
       itemDetails: {
         serialNumber: string;
         sku: string;
+        mintNumber: string;
       };
       newOwnerEmail: string;
       newOwnerName: string;
@@ -272,6 +292,7 @@ For any questions, contact ${supportEmail}
 <p>The following transfer request has been declined by the recipient:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
+  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
   <p><strong>Declined by:</strong> ${newOwnerName} (${newOwnerEmail})</p>
 </div>
@@ -291,6 +312,7 @@ interface TransferRequestEmailData {
   itemDetails: {
     serialNumber: string;
     sku: string;
+    mintNumber: string;
   };
   confirmUrl: string;
 }
@@ -299,6 +321,7 @@ interface TransferConfirmedEmailData {
   itemDetails: {
     serialNumber: string;
     sku: string;
+    mintNumber: string;
   };
   viewUrl: string;
 }
@@ -307,6 +330,7 @@ interface TransferCompletedEmailData {
   itemDetails: {
     serialNumber: string;
     sku: string;
+    mintNumber: string;
   };
   newOwnerName: string;
   newOwnerEmail: string;
@@ -316,6 +340,7 @@ interface TransferCancelledEmailData {
   itemDetails: {
     serialNumber: string;
     sku: string;
+    mintNumber: string;
   };
 }
 
@@ -323,6 +348,7 @@ interface TransferDeclinedEmailData {
   itemDetails: {
     serialNumber: string;
     sku: string;
+    mintNumber: string;
   };
   newOwnerEmail: string;
   newOwnerName: string;

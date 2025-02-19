@@ -117,6 +117,7 @@ export async function POST(
         itemDetails: {
           serialNumber: item.serialNumber,
           sku: item.sku,
+          mintNumber: item.mintNumber,
         },
         confirmUrl: `${env.NEXT_PUBLIC_APP_URL}/items/${authenticatedItemId}/transfer/${createdTransfer[0].id}/confirm`,
       },
@@ -218,6 +219,7 @@ export async function DELETE(
         itemDetails: {
           serialNumber: item.serialNumber,
           sku: item.sku,
+          mintNumber: item.mintNumber,
         },
       },
     });
@@ -494,8 +496,9 @@ export async function PUT(
             itemDetails: {
               serialNumber: item.serialNumber,
               sku: item.sku,
+              mintNumber: item.mintNumber,
             },
-            viewUrl: `${env.NEXT_PUBLIC_APP_URL}/items/${item.id}`,
+            viewUrl: `${item.nfcLink}`,
           },
         }),
         // Send completion notice to original owner
@@ -506,6 +509,7 @@ export async function PUT(
             itemDetails: {
               serialNumber: item.serialNumber,
               sku: item.sku,
+              mintNumber: item.mintNumber,
             },
             newOwnerName: transfer.newOwnerName,
             newOwnerEmail: transfer.newOwnerEmail,
@@ -532,6 +536,7 @@ export async function PUT(
           itemDetails: {
             serialNumber: item.serialNumber,
             sku: item.sku,
+            mintNumber: item.mintNumber,
           },
           newOwnerEmail: transfer.newOwnerEmail,
           newOwnerName: transfer.newOwnerName,
