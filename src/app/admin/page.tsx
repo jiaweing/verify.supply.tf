@@ -13,11 +13,12 @@ interface SearchParams {
   search?: string;
 }
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+interface PageProps {
+  searchParams: Promise<SearchParams>;
+}
+
+export default async function AdminPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const isAuthenticated = await auth();
   if (!isAuthenticated) {
     redirect("/admin/login");

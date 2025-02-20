@@ -16,13 +16,6 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   // Maximum time (ms) to wait for available connection
   connectionTimeoutMillis: isProd ? 5000 : 2000,
-  // Enable SSL in production
-  ssl: isProd
-    ? {
-        rejectUnauthorized: true,
-        // You might need to add ca, key, cert if using custom SSL certificates
-      }
-    : undefined,
 });
 
 // Handle pool errors
