@@ -34,6 +34,9 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 p-4">
+        <div className="flex justify-center mb-8">
+          <img src="/logo.svg" alt="SUPPLY: THE FUTURE" className="h-12" />
+        </div>
         <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
         <Input
           type="email"

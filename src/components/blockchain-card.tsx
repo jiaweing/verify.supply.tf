@@ -38,15 +38,15 @@ export function BlockchainCard({
               {chainVerification.isValid ? (
                 <Badge
                   variant="outline"
-                  className=" border-green-500 bg-green-100 text-green-500"
+                  className=" border-green-500 bg-green-100 text-green-500 dark:border-green-900 dark:bg-green-900 dark:text-white"
                 >
-                  <Verified className="h-4 w-4 mr-1 fill-green-500 text-white" />{" "}
+                  <Verified className="h-4 w-4 mr-1 fill-green-500 text-white dark:fill-green-900" />{" "}
                   Valid
                 </Badge>
               ) : (
                 <Badge
                   variant="outline"
-                  className=" border-red-500 bg-red-100 text-red-500"
+                  className=" border-red-500 bg-red-100 text-red-500 dark:border-red-900 dark:bg-red-900 dark:text-white"
                 >
                   <AlertCircle className="h-4 w-4 mr-1" /> Invalid
                 </Badge>

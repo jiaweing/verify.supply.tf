@@ -1,5 +1,7 @@
 "use client";
 
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import {
   Card,
   CardContent,
@@ -71,7 +73,8 @@ export default function ItemVerifyPage() {
   }
 
   return (
-    <div className="flex items-center justify-center bg-background min-h-screen">
+    <div className="flex items-center justify-center flex-col gap-2 bg-background min-h-screen">
+      <Header />
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>
@@ -93,6 +96,7 @@ export default function ItemVerifyPage() {
           />
         </CardContent>
       </Card>
+      <Footer />
     </div>
   );
 }

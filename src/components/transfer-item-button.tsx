@@ -1,7 +1,7 @@
 "use client";
 
 import { transferItem } from "@/app/items/[id]/transfer/actions";
-import { AlertCircle, Loader2, Send } from "lucide-react";
+import { AlertCircle, Forward, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
@@ -60,7 +60,7 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="default" className="mr-4">
-          <Send className="mr-2" /> Transfer
+          <Forward className="mr-1" /> Transfer
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -95,7 +95,7 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
           <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                 Transferring...
               </>
             ) : (

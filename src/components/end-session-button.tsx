@@ -1,7 +1,7 @@
 "use client";
 
 import { logoutAction } from "@/app/(auth)/admin/actions";
-import { Loader2, LogOut } from "lucide-react";
+import { DoorOpen, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Button } from "./ui/button";
@@ -30,12 +30,12 @@ export function EndSessionButton() {
     >
       {isLoading ? (
         <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
           Ending...
         </>
       ) : (
         <>
-          <LogOut className="mr-2" /> End Session
+          <DoorOpen className="mr-1" /> End Session
         </>
       )}
     </Button>

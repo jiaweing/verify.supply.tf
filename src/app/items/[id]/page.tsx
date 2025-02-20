@@ -143,12 +143,14 @@ export default async function ItemVerificationPage(props: {
           <div className="flex justify-center mb-4">
             <div
               className={`w-24 h-24 rounded-full ${
-                chainVerification.isValid ? "bg-green-100" : "bg-red-100"
+                chainVerification.isValid
+                  ? "bg-green-100 dark:bg-green-700"
+                  : "bg-red-100 dark:bg-red-700"
               } flex items-center justify-center`}
             >
               {chainVerification.isValid ? (
                 <svg
-                  className="w-16 h-16 text-green-600"
+                  className="w-16 h-16 text-green-600 dark:text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -163,7 +165,7 @@ export default async function ItemVerificationPage(props: {
                 </svg>
               ) : (
                 <svg
-                  className="w-16 h-16 text-red-600"
+                  className="w-16 h-16 text-red-600 dark:text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
