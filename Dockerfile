@@ -1,28 +1,26 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Use an official Node.js runtime as a parent image
+FROM node:18
+
+# Install pnpm
 RUN npm install -g pnpm
 
-WORKDIR /app
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy the package.json and pnpm-lock.yaml files
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
 
+# Install dependencies
+RUN pnpm install
+
+# Copy the rest of the application code
 COPY . .
-RUN pnpm build
 
-# Production stage
-FROM node:20-alpine AS runner
-RUN npm install -g pnpm
+# Build the application
+RUN pnpm run build
 
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
+# Expose the port the app runs on
 EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+# Define the command to run the application
+CMD ["pnpm", "start"]
