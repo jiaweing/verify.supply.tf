@@ -2,6 +2,7 @@ import { ItemsTable } from "@/components/items-table";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import { formatMintNumber } from "@/lib/item";
 import { sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -55,10 +56,12 @@ export default async function AdminPage({
       </div>
 
       <ItemsTable
-        items={itemList.map((item) => ({
-          ...item,
-          mintNumber: Number(item.mintNumber),
-        }))}
+        items={await Promise.all(
+          itemList.map(async (item) => ({
+            ...item,
+            mintNumber: await formatMintNumber(item.id),
+          }))
+        )}
       />
     </div>
   );

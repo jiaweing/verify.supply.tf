@@ -73,6 +73,7 @@ The owner of the following item would like to transfer ownership to you:
 
 Serial Number: ${itemDetails.serialNumber}
 SKU: ${itemDetails.sku}
+Mint Number: ${itemDetails.mintNumber}
 
 To accept this transfer and take ownership of the item, click the following link:
 ${confirmUrl}
@@ -100,7 +101,7 @@ For any questions, contact ${supportEmail}
 <p>The owner of the following item would like to transfer ownership to you:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
-  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
+  <p><strong>Mint Number:</strong> ${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
 <p>To accept this transfer and take ownership of the item, click the following link:</p>
@@ -125,7 +126,7 @@ For any questions, contact ${supportEmail}
 You have successfully taken ownership of the following item:
 
 Serial Number: ${itemDetails.serialNumber}
-Mint Number: #${itemDetails.mintNumber}
+Mint Number: ${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 To view your item details, scan the item's NFC tag with your phone or click the following link:
@@ -148,7 +149,7 @@ For any questions, contact ${supportEmail}
 <p>You have successfully taken ownership of the following item:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
-  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
+  <p><strong>Mint Number:</strong> ${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
 <p>To view your item details:</p>
@@ -177,7 +178,7 @@ For any questions, contact ${supportEmail}
 The transfer of your item has been completed:
 
 Serial Number: ${itemDetails.serialNumber}
-Mint Number: #${itemDetails.mintNumber}
+Mint Number: ${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 New Owner: ${newOwnerName} (${newOwnerEmail})
@@ -201,7 +202,7 @@ For any questions, contact ${supportEmail}
 <p>The transfer of your item has been completed:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
-  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
+  <p><strong>Mint Number:</strong> ${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
   <p><strong>New Owner:</strong> ${newOwnerName} (${newOwnerEmail})</p>
 </div>
@@ -222,7 +223,7 @@ For any questions, contact ${supportEmail}
 The pending transfer for the following item has been cancelled by the owner:
 
 Serial Number: ${itemDetails.serialNumber}
-Mint Number: #${itemDetails.mintNumber}
+Mint Number: ${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 No further action is required.
@@ -242,7 +243,7 @@ For any questions, contact ${supportEmail}
 <p>The pending transfer for the following item has been cancelled by the owner:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
-  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
+  <p><strong>Mint Number:</strong> ${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
 </div>
 <p>No further action is required.</p>
@@ -267,7 +268,7 @@ For any questions, contact ${supportEmail}
 The following transfer request has been declined by the recipient:
 
 Serial Number: ${itemDetails.serialNumber}
-Mint Number: #${itemDetails.mintNumber}
+Mint Number: ${itemDetails.mintNumber}
 SKU: ${itemDetails.sku}
 
 Declined by: ${newOwnerName} (${newOwnerEmail})
@@ -293,7 +294,7 @@ For any questions, contact ${supportEmail}
 <p>The following transfer request has been declined by the recipient:</p>
 <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
   <p><strong>Serial Number:</strong> ${itemDetails.serialNumber}</p>
-  <p><strong>Mint Number:</strong> #${itemDetails.mintNumber}</p>
+  <p><strong>Mint Number:</strong> ${itemDetails.mintNumber}</p>
   <p><strong>SKU:</strong> ${itemDetails.sku}</p>
   <p><strong>Declined by:</strong> ${newOwnerName} (${newOwnerEmail})</p>
 </div>

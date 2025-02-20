@@ -11,7 +11,7 @@ interface ClickableTableRowProps {
   id: string;
   serialNumber: string;
   sku: string;
-  mintNumber: number | string;
+  mintNumber: string;
   originalOwnerName: string;
   nfcLink: string;
 }
@@ -33,9 +33,7 @@ export function ClickableTableRow({
     >
       <TableCell>{serialNumber}</TableCell>
       <TableCell>{sku}</TableCell>
-      <TableCell>
-        #{typeof mintNumber === "string" ? mintNumber : mintNumber.toString()}
-      </TableCell>
+      <TableCell>{mintNumber}</TableCell>
       <TableCell>{originalOwnerName}</TableCell>
       <TableCell>
         <div

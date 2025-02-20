@@ -22,6 +22,7 @@ import {
 import { validateSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
 import { formatDate, formatDateTime } from "@/lib/date";
+import { formatMintNumber } from "@/lib/item";
 import {
   fetchVisibilityPreferences,
   maskInfo,
@@ -192,7 +193,9 @@ export default async function ItemVerificationPage(props: {
             </div>
             <div>
               <dt className="font-medium mb-1">Mint Number</dt>
-              <dd className="text-muted-foreground">#{item.mintNumber}</dd>
+              <dd className="text-muted-foreground">
+                {await formatMintNumber(item.id)}
+              </dd>
             </div>
             <div>
               <dt className="font-medium mb-1">Weight</dt>

@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { auth } from "@/lib/auth";
 import { verifyItemChain } from "@/lib/blockchain";
 import { formatDate, formatDateTime } from "@/lib/date";
+import { formatMintNumber } from "@/lib/item";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -82,7 +83,9 @@ export default async function ItemPage(props: {
               </div>
               <div>
                 <dt className="font-medium">Mint Number</dt>
-                <dd className="text-muted-foreground">#{item.mintNumber}</dd>
+                <dd className="text-muted-foreground">
+                  {await formatMintNumber(item.id)}
+                </dd>
               </div>
               <div>
                 <dt className="font-medium">Weight</dt>

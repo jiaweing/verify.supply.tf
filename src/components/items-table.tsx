@@ -26,7 +26,7 @@ interface Item {
   id: string;
   serialNumber: string;
   sku: string;
-  mintNumber: number;
+  mintNumber: string;
   originalOwnerName: string;
   nfcLink: string;
 }

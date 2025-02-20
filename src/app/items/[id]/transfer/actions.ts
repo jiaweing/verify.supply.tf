@@ -11,6 +11,7 @@ import {
   verifyItemChain,
 } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
+import { formatMintNumber } from "@/lib/item";
 import { and, asc, desc, eq, not, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 
@@ -263,6 +264,7 @@ export async function processTransferAction(
 
     // Send confirmation emails
     const viewUrl = `${item.nfcLink}`;
+    const formattedMintNumber = await formatMintNumber(item.id);
 
     await Promise.all([
       // Send confirmation to new owner
@@ -273,7 +275,7 @@ export async function processTransferAction(
           itemDetails: {
             serialNumber: item.serialNumber,
             sku: item.sku,
-            mintNumber: item.mintNumber,
+            mintNumber: formattedMintNumber,
           },
           viewUrl,
         },
@@ -286,7 +288,7 @@ export async function processTransferAction(
           itemDetails: {
             serialNumber: item.serialNumber,
             sku: item.sku,
-            mintNumber: item.mintNumber,
+            mintNumber: formattedMintNumber,
           },
           newOwnerName: transfer.newOwnerName,
           newOwnerEmail: transfer.newOwnerEmail,
@@ -300,6 +302,7 @@ export async function processTransferAction(
       .where(eq(ownershipTransfers.id, transferId));
   } else {
     // Handle rejection case
+    const formattedMintNumber = await formatMintNumber(item.id);
     await Promise.all([
       // Send rejection email
       sendEmail({
@@ -309,7 +312,7 @@ export async function processTransferAction(
           itemDetails: {
             serialNumber: item.serialNumber,
             sku: item.sku,
-            mintNumber: item.mintNumber,
+            mintNumber: formattedMintNumber,
           },
           newOwnerName: transfer.newOwnerName,
           newOwnerEmail: transfer.newOwnerEmail,
@@ -427,6 +430,9 @@ export async function transferItem(formData: FormData) {
   // Generate the confirmation URL
   const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/items/${itemId}/transfer/${transfer.id}/confirm`;
 
+  // Format mint number for email
+  const formattedMintNumber = await formatMintNumber(item.id);
+
   // Send email to new owner
   await sendEmail({
     to: newOwnerEmail,
@@ -437,7 +443,7 @@ export async function transferItem(formData: FormData) {
       itemDetails: {
         serialNumber: item.serialNumber,
         sku: item.sku,
-        mintNumber: item.mintNumber,
+        mintNumber: formattedMintNumber,
       },
       confirmUrl,
     },
@@ -488,6 +494,9 @@ export async function cancelTransfer(formData: FormData) {
     .delete(ownershipTransfers)
     .where(eq(ownershipTransfers.id, transferId));
 
+  // Format mint number for email
+  const formattedMintNumber = await formatMintNumber(item.id);
+
   // Send cancellation email
   await sendEmail({
     to: transfer.newOwnerEmail,
@@ -496,7 +505,7 @@ export async function cancelTransfer(formData: FormData) {
       itemDetails: {
         serialNumber: item.serialNumber,
         sku: item.sku,
-        mintNumber: item.mintNumber,
+        mintNumber: formattedMintNumber,
       },
     },
   });
