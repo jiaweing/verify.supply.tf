@@ -50,7 +50,7 @@ export const blocks = pgTable("blocks", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   previousHash: varchar("previous_hash", { length: 64 }).notNull(),
   merkleRoot: varchar("merkle_root", { length: 64 }).notNull(),
-  nonce: bigint("nonce", { mode: "number" }).notNull(),
+  blockNonce: bigint("block_nonce", { mode: "number" }).notNull(),
   hash: varchar("hash", { length: 64 }).unique().notNull(),
 });
 
@@ -62,6 +62,9 @@ export const transactions = pgTable("transactions", {
   data: jsonb("data").notNull(), // Stores transaction-specific data
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   hash: varchar("hash", { length: 64 }).unique().notNull(),
+  transactionNonce: varchar("transaction_nonce", { length: 64 })
+    .unique()
+    .notNull(),
 });
 
 export const items = pgTable("items", {
@@ -137,6 +140,7 @@ export const sessions = pgTable("sessions", {
     .notNull(),
   sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -146,6 +150,7 @@ export const authCodes = pgTable("auth_codes", {
   code: varchar("code", { length: 6 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  isUsed: boolean("is_used").default(false).notNull(),
 });
 
 // Relations

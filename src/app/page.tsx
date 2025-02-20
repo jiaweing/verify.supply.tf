@@ -1,3 +1,5 @@
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +27,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="space-y-4 w-[400px]">
+        <Header />
         <VerifyCard />
 
         {itemId && (
@@ -48,6 +51,7 @@ export default async function HomePage() {
             </CardContent>
           </Card>
         )}
+        <Footer />
       </div>
     </div>
   );

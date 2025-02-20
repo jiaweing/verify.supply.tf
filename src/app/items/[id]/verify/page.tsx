@@ -1,5 +1,7 @@
 "use client";
 
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import {
   Card,
   CardContent,
@@ -48,12 +50,12 @@ export default function ItemVerifyPage() {
         });
         // Keep the URL itemId for verification, but validate it matches the encrypted data
         if (item.productId !== urlItemId) {
-          console.error("Item ID mismatch between URL and encrypted data");
+          console.error("Verification failed");
           setIsLoading(false);
           return;
         }
-      } catch (err) {
-        console.error("Error fetching item details:", err);
+      } catch {
+        console.error("Verification process failed");
       } finally {
         setIsLoading(false);
       }
@@ -71,7 +73,8 @@ export default function ItemVerifyPage() {
   }
 
   return (
-    <div className="flex items-center justify-center bg-background min-h-screen">
+    <div className="flex items-center justify-center flex-col gap-2 bg-background min-h-screen">
+      <Header />
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>
@@ -93,6 +96,7 @@ export default function ItemVerifyPage() {
           />
         </CardContent>
       </Card>
+      <Footer />
     </div>
   );
 }

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/input-otp";
 import { TurnstileWidget } from "@/components/ui/turnstile";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Forward, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -79,6 +79,7 @@ export function VerifyForm({
   const [turnstileToken, setTurnstileToken] = React.useState<string>("");
   const [canResend, setCanResend] = React.useState(false);
   const [resendTimer, setResendTimer] = React.useState(60);
+  const [resendAttempts, setResendAttempts] = React.useState(0);
 
   // Notify parent component of step changes
   React.useEffect(() => {
@@ -171,6 +172,7 @@ export function VerifyForm({
   async function handleResendCode() {
     try {
       setIsResending(true);
+      const backoffTime = Math.min(60 * Math.pow(2, resendAttempts), 300); // Max 5 minutes
       const formData = new FormData();
       formData.append("email", verifiedData.email!);
       formData.append("serialNumber", verifiedData.serialNumber!);
@@ -183,7 +185,8 @@ export function VerifyForm({
 
       toast.success("New verification code sent to your email");
       setCanResend(false);
-      setResendTimer(60);
+      setResendTimer(backoffTime);
+      setResendAttempts((prev) => prev + 1);
       const timer = setInterval(() => {
         setResendTimer((prev) => {
           if (prev <= 1) {
@@ -339,7 +342,10 @@ export function VerifyForm({
                     Resending...
                   </>
                 ) : canResend ? (
-                  "Request for another code"
+                  <div className="flex flex-row gap-2">
+                    <Forward className="text-muted-foreground" />
+                    Resend Code
+                  </div>
                 ) : (
                   `Resend Code (${resendTimer}s)`
                 )}
@@ -351,7 +357,7 @@ export function VerifyForm({
                   className="text-sm"
                   onClick={() => setStep("verify")}
                 >
-                  <ChevronLeft /> Go Back
+                  <ChevronLeft /> Back
                 </Button>
               </div>
             </div>

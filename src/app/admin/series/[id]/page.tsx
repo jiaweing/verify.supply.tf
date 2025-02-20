@@ -15,12 +15,10 @@ import { SeriesForm } from "../series-form";
 import { SkuForm } from "../sku-form";
 import { createSku, updateSeries, updateSku } from "./actions";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  params = await params;
+  const params = await props.params;
   const seriesData = await db.query.series.findFirst({
     where: eq(series.id, parseInt(params.id)),
   });
@@ -34,12 +32,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function EditSeriesPage({
-  params,
-}: {
-  params: { id: string };
+export default async function EditSeriesPage(props: {
+  params: Promise<{ id: string }>;
 }) {
-  params = await params;
+  const params = await props.params;
   const seriesData = await db.query.series.findFirst({
     where: eq(series.id, parseInt(params.id)),
   });

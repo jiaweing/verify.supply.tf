@@ -6,7 +6,7 @@ import { createSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { env } from "process";
 
@@ -181,14 +181,25 @@ export async function verifyCode(formData: FormData) {
     throw new Error("Item ID is required");
   }
 
-  // Verify code
-  const authCode = await db.query.authCodes.findFirst({
-    where: ({ email: emailCol, code: codeCol }, { eq, and }) =>
-      and(eq(emailCol, email), eq(codeCol, code)),
-  });
+  // Atomically update and return the auth code
+  const [authCode] = await db
+    .update(authCodes)
+    .set({ isUsed: true })
+    .where(
+      and(
+        eq(authCodes.email, email),
+        eq(authCodes.code, code),
+        eq(authCodes.isUsed, false)
+      )
+    )
+    .returning();
 
-  if (!authCode || authCode.expiresAt < new Date()) {
-    throw new Error("Invalid or expired code");
+  if (!authCode) {
+    throw new Error("Invalid code");
+  }
+
+  if (authCode.expiresAt < new Date()) {
+    throw new Error("Code has expired");
   }
 
   // Use the robust blockchain verification that checks the entire chain
@@ -209,9 +220,6 @@ export async function verifyCode(formData: FormData) {
     sameSite: "lax",
     path: "/",
   });
-
-  // Clean up auth code
-  await db.delete(authCodes).where(eq(authCodes.id, authCode.id));
 
   return { success: true };
 }

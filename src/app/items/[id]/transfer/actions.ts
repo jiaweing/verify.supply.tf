@@ -12,6 +12,7 @@ import {
 } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { formatMintNumber } from "@/lib/item";
+import { generateNonce, isNonceUsed } from "@/lib/nonce";
 import { and, asc, desc, eq, not, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 
@@ -102,10 +103,32 @@ export async function processTransferAction(
     const timestampISO = new Date().toISOString().replace(/\.\d+Z$/, ".000Z");
     const timestamp = new Date(timestampISO); // For DB
 
+    // Generate and verify nonce is unique
+    const MAX_ATTEMPTS = 99;
+    let attempts = 0;
+    let nonce: string | null = null;
+
+    while (attempts < MAX_ATTEMPTS) {
+      const candidateNonce = generateNonce();
+      const nonceUsed = await isNonceUsed(candidateNonce);
+      if (!nonceUsed) {
+        nonce = candidateNonce;
+        break;
+      }
+      attempts++;
+    }
+
+    if (!nonce) {
+      throw new Error(
+        "Failed to generate unique transaction nonce after multiple attempts"
+      );
+    }
+
     const transactionData: TransactionData = {
       type: "transfer",
       itemId: item.id,
       timestamp: timestampISO,
+      nonce,
       data: {
         from: {
           name: currentOwnership.currentOwnerName,
@@ -167,7 +190,7 @@ export async function processTransferAction(
           timestamp,
           previousHash: lastBlock?.hash ?? "0".repeat(64),
           merkleRoot,
-          nonce: 0,
+          blockNonce: 0,
           hash: blockHash,
         })
         .returning();
@@ -197,6 +220,7 @@ export async function processTransferAction(
               data: transactionData,
               timestamp,
               hash: transactionHash,
+              transactionNonce: nonce,
             })
             .returning();
 
@@ -333,6 +357,43 @@ export async function transferItem(formData: FormData) {
 
   if (!itemId || !newOwnerName || !newOwnerEmail) {
     throw new Error("Missing required fields");
+  }
+
+  // Constants
+  const COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  const SAFETY_MARGIN = 5 * 60 * 1000; // 5 minutes safety margin for clock skew
+
+  // Check transfer cooldown using normalized timestamps
+  const lastTransfer = await db.query.transactions.findFirst({
+    where: and(
+      eq(transactions.itemId, itemId),
+      eq(transactions.transactionType, "transfer")
+    ),
+    orderBy: [desc(transactions.timestamp)],
+  });
+
+  if (lastTransfer) {
+    // Get current time in UTC with normalized milliseconds
+    const currentTime = new Date(
+      new Date().toISOString().replace(/\.\d+Z$/, ".000Z")
+    );
+    const lastTransferTime = new Date(
+      lastTransfer.timestamp.toISOString().replace(/\.\d+Z$/, ".000Z")
+    );
+
+    const timeSinceLastTransfer =
+      currentTime.getTime() - lastTransferTime.getTime();
+
+    // Add safety margin to cooldown period
+    if (timeSinceLastTransfer < COOLDOWN_PERIOD + SAFETY_MARGIN) {
+      const remainingTime =
+        COOLDOWN_PERIOD + SAFETY_MARGIN - timeSinceLastTransfer;
+      const hoursRemaining = Math.ceil(remainingTime / (60 * 60 * 1000));
+
+      throw new Error(
+        `Please wait ${hoursRemaining} hours before attempting another transfer. This cooldown helps ensure transaction security.`
+      );
+    }
   }
 
   const cookieStore = await cookies();

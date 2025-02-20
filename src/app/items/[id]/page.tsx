@@ -48,6 +48,12 @@ export default async function ItemVerificationPage(props: {
     ownershipHistory: OwnershipTransfer[];
     creationBlock: Block | null;
     latestTransaction: (Transaction & { block: Block | null }) | null;
+    sku: {
+      code: string;
+      series: {
+        name: string;
+      };
+    };
   };
   let item: ItemWithRelations | null = null;
 
@@ -75,6 +81,11 @@ export default async function ItemVerificationPage(props: {
             transactions: {
               with: {
                 block: true,
+              },
+            },
+            sku: {
+              with: {
+                series: true,
               },
             },
           },
@@ -122,9 +133,9 @@ export default async function ItemVerificationPage(props: {
         </Link>
       </div>
       <div className="flex flex-col justify-center items-center space-y-4">
-        <ItemImages sku={item.sku} />
+        <ItemImages sku={item.sku.code} />
         <h1 className="text-xl font-semibold capitalize">
-          {item.sku.split("_")[0].toLowerCase()}
+          {item.sku.series.name.toLowerCase()} {await formatMintNumber(item.id)}
         </h1>
       </div>
       <Card className="text-center">
@@ -132,12 +143,14 @@ export default async function ItemVerificationPage(props: {
           <div className="flex justify-center mb-4">
             <div
               className={`w-24 h-24 rounded-full ${
-                chainVerification.isValid ? "bg-green-100" : "bg-red-100"
+                chainVerification.isValid
+                  ? "bg-green-100 dark:bg-green-700"
+                  : "bg-red-100 dark:bg-red-700"
               } flex items-center justify-center`}
             >
               {chainVerification.isValid ? (
                 <svg
-                  className="w-16 h-16 text-green-600"
+                  className="w-16 h-16 text-green-600 dark:text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -152,7 +165,7 @@ export default async function ItemVerificationPage(props: {
                 </svg>
               ) : (
                 <svg
-                  className="w-16 h-16 text-red-600"
+                  className="w-16 h-16 text-red-600 dark:text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -189,7 +202,7 @@ export default async function ItemVerificationPage(props: {
             </div>
             <div>
               <dt className="font-medium mb-1">SKU</dt>
-              <dd className="text-muted-foreground">{item.sku}</dd>
+              <dd className="text-muted-foreground">{item.sku.code}</dd>
             </div>
             <div>
               <dt className="font-medium mb-1">Mint Number</dt>

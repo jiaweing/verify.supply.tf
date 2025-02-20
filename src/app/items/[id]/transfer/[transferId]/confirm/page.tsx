@@ -1,3 +1,5 @@
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import { TransferConfirmButtons } from "@/components/transfer-confirm-buttons";
 import {
   Card,
@@ -8,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { items, ownershipTransfers } from "@/db/schema";
+import { formatMintNumber } from "@/lib/item";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { confirmTransfer, rejectTransfer } from "./actions";
@@ -26,6 +29,13 @@ export default async function TransferConfirmPage({
   // Get item details
   const item = await db.query.items.findFirst({
     where: eq(items.id, id),
+    with: {
+      sku: {
+        with: {
+          series: true,
+        },
+      },
+    },
   });
 
   if (!transfer || !item) {
@@ -81,7 +91,8 @@ export default async function TransferConfirmPage({
   };
 
   return (
-    <div className="container py-10 mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+    <div className="container py-10 mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] space-y-4">
+      <Header />
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Accept Transfer</CardTitle>
@@ -94,15 +105,19 @@ export default async function TransferConfirmPage({
             <h4 className="text-sm font-medium">Item Details</h4>
             <div className="rounded-md border p-4 text-sm font-mono space-y-2">
               <div>
+                <span className="font-medium">Series:</span>{" "}
+                {item.sku.series.name}
+              </div>
+              <div>
+                <span className="font-medium">Mint Number:</span>{" "}
+                {await formatMintNumber(item.id)}
+              </div>
+              <div>
                 <span className="font-medium">Serial Number:</span>{" "}
                 {item.serialNumber}
               </div>
               <div>
-                <span className="font-medium">SKU:</span> {item.sku}
-              </div>
-              <div>
-                <span className="font-medium">Mint Number:</span>{" "}
-                {item.mintNumber}
+                <span className="font-medium">SKU:</span> {item.sku.code}
               </div>
               {item.weight && (
                 <div>
@@ -121,6 +136,7 @@ export default async function TransferConfirmPage({
           />
         </CardContent>
       </Card>
+      <Footer />
     </div>
   );
 }

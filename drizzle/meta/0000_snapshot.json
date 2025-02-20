@@ -1,5 +1,5 @@
 {
-  "id": "e5918a10-9f93-4fad-9f02-ff28eecad287",
+  "id": "120389f7-b5c1-449c-a590-64bef6e5a1e8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -91,6 +91,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "is_used": {
+          "name": "is_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
@@ -136,8 +143,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "nonce": {
-          "name": "nonce",
+        "block_nonce": {
+          "name": "block_nonce",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -580,6 +587,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_used": {
+          "name": "is_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -731,6 +745,12 @@
           "type": "varchar(64)",
           "primaryKey": false,
           "notNull": true
+        },
+        "transaction_nonce": {
+          "name": "transaction_nonce",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -756,6 +776,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "hash"
+          ]
+        },
+        "transactions_transaction_nonce_unique": {
+          "name": "transactions_transaction_nonce_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "transaction_nonce"
           ]
         }
       },
