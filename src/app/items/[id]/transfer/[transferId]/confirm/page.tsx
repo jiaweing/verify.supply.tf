@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { items, ownershipTransfers } from "@/db/schema";
+import { formatMintNumber } from "@/lib/item";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { confirmTransfer, rejectTransfer } from "./actions";
@@ -26,6 +27,13 @@ export default async function TransferConfirmPage({
   // Get item details
   const item = await db.query.items.findFirst({
     where: eq(items.id, id),
+    with: {
+      sku: {
+        with: {
+          series: true,
+        },
+      },
+    },
   });
 
   if (!transfer || !item) {
@@ -94,15 +102,19 @@ export default async function TransferConfirmPage({
             <h4 className="text-sm font-medium">Item Details</h4>
             <div className="rounded-md border p-4 text-sm font-mono space-y-2">
               <div>
+                <span className="font-medium">Series:</span>{" "}
+                {item.sku.series.name}
+              </div>
+              <div>
+                <span className="font-medium">Mint Number:</span>{" "}
+                {await formatMintNumber(item.id)}
+              </div>
+              <div>
                 <span className="font-medium">Serial Number:</span>{" "}
                 {item.serialNumber}
               </div>
               <div>
-                <span className="font-medium">SKU:</span> {item.sku}
-              </div>
-              <div>
-                <span className="font-medium">Mint Number:</span>{" "}
-                {item.mintNumber}
+                <span className="font-medium">SKU:</span> {item.sku.code}
               </div>
               {item.weight && (
                 <div>

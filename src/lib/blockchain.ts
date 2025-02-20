@@ -49,13 +49,14 @@ export interface BlockData {
   timestamp: string;
   previousHash: string;
   merkleRoot: string;
-  nonce: number;
+  blockNonce: number;
 }
 
 export interface TransactionData {
   type: "create" | "transfer";
   itemId: string;
   timestamp: string;
+  nonce: string; // Add nonce for replay protection
   data: {
     from?: {
       name: string;
@@ -229,7 +230,7 @@ export class Block {
     previousHash: string,
     transactions: TransactionData[],
     timestamp = new Date().toISOString(),
-    nonce = 0
+    blockNonce = 0
   ) {
     this.transactions = transactions.map((tx) => ({
       ...tx,
@@ -242,7 +243,7 @@ export class Block {
       timestamp: normalizeTimestamp(timestamp),
       previousHash,
       merkleRoot: this.merkleTree.getRoot(),
-      nonce,
+      blockNonce,
     };
   }
 
@@ -417,7 +418,7 @@ export async function verifyItemChain(
       normalizedBlock.previousHash,
       normalizedTransactions.map((tx) => tx.data as TransactionData),
       normalizedBlock.timestamp,
-      normalizedBlock.nonce
+      normalizedBlock.blockNonce
     );
 
     // Verify block hash

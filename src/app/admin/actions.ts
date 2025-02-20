@@ -7,7 +7,21 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z
+    .string()
+    .email()
+    .refine(
+      (email) => {
+        return (
+          email.length <= 254 && // RFC 5321
+          /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
+            email
+          ) &&
+          !email.includes("..") // No consecutive dots
+        );
+      },
+      { message: "Invalid email format" }
+    ),
   password: z.string().min(1),
 });
 
@@ -37,7 +51,7 @@ export async function adminLoginAction(formData: FormData) {
       secure: env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 4, // 4 hours
     });
 
     redirect("/admin");

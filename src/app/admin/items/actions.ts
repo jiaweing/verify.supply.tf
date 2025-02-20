@@ -170,10 +170,14 @@ export async function createItemAction(formData: FormData) {
     );
 
     // Create transaction data for item creation using the same timestamp
+    // Generate nonce for transaction data
+    const transactionNonce = crypto.randomBytes(32).toString("hex");
+
     const transactionData: TransactionData = {
       type: "create",
       itemId,
       timestamp: timestampISO,
+      nonce: transactionNonce,
       data: {
         to: {
           name: parsed.data.originalOwnerName,
@@ -221,7 +225,7 @@ export async function createItemAction(formData: FormData) {
           timestamp,
           previousHash: lastBlock?.hash ?? "0".repeat(64),
           merkleRoot,
-          nonce: 0,
+          blockNonce: 0,
           hash: blockHash,
         })
         .returning();
@@ -236,6 +240,7 @@ export async function createItemAction(formData: FormData) {
           data: transactionData,
           timestamp, // Required by schema
           hash: merkleRoot, // Since we only have one transaction per block
+          transactionNonce, // Use the same nonce from transaction data
         })
         .returning();
 

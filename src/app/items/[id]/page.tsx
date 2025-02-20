@@ -48,6 +48,12 @@ export default async function ItemVerificationPage(props: {
     ownershipHistory: OwnershipTransfer[];
     creationBlock: Block | null;
     latestTransaction: (Transaction & { block: Block | null }) | null;
+    sku: {
+      code: string;
+      series: {
+        name: string;
+      };
+    };
   };
   let item: ItemWithRelations | null = null;
 
@@ -75,6 +81,11 @@ export default async function ItemVerificationPage(props: {
             transactions: {
               with: {
                 block: true,
+              },
+            },
+            sku: {
+              with: {
+                series: true,
               },
             },
           },
@@ -122,9 +133,9 @@ export default async function ItemVerificationPage(props: {
         </Link>
       </div>
       <div className="flex flex-col justify-center items-center space-y-4">
-        <ItemImages sku={item.sku} />
+        <ItemImages sku={item.sku.code} />
         <h1 className="text-xl font-semibold capitalize">
-          {item.sku.split("_")[0].toLowerCase()}
+          {item.sku.series.name.toLowerCase()} {await formatMintNumber(item.id)}
         </h1>
       </div>
       <Card className="text-center">
@@ -189,7 +200,7 @@ export default async function ItemVerificationPage(props: {
             </div>
             <div>
               <dt className="font-medium mb-1">SKU</dt>
-              <dd className="text-muted-foreground">{item.sku}</dd>
+              <dd className="text-muted-foreground">{item.sku.code}</dd>
             </div>
             <div>
               <dt className="font-medium mb-1">Mint Number</dt>

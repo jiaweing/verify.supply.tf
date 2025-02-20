@@ -7,6 +7,9 @@ import * as schema from "./schema";
 const pool = new Pool({
   connectionString:
     env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/supply",
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // Initialize drizzle with the pool and schema

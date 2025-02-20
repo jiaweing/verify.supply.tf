@@ -12,7 +12,8 @@ CREATE TABLE "auth_codes" (
 	"email" varchar(255) NOT NULL,
 	"code" varchar(6) NOT NULL,
 	"expires_at" timestamp NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"is_used" boolean DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "blocks" (
@@ -21,7 +22,7 @@ CREATE TABLE "blocks" (
 	"timestamp" timestamp DEFAULT now() NOT NULL,
 	"previous_hash" varchar(64) NOT NULL,
 	"merkle_root" varchar(64) NOT NULL,
-	"nonce" bigint NOT NULL,
+	"block_nonce" bigint NOT NULL,
 	"hash" varchar(64) NOT NULL,
 	CONSTRAINT "blocks_hash_unique" UNIQUE("hash")
 );
@@ -87,6 +88,7 @@ CREATE TABLE "sessions" (
 	"item_id" uuid NOT NULL,
 	"session_token" varchar(255) NOT NULL,
 	"expires_at" timestamp NOT NULL,
+	"is_used" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "sessions_session_token_unique" UNIQUE("session_token")
 );
@@ -108,7 +110,9 @@ CREATE TABLE "transactions" (
 	"data" jsonb NOT NULL,
 	"timestamp" timestamp DEFAULT now() NOT NULL,
 	"hash" varchar(64) NOT NULL,
-	CONSTRAINT "transactions_hash_unique" UNIQUE("hash")
+	"transaction_nonce" varchar(64) NOT NULL,
+	CONSTRAINT "transactions_hash_unique" UNIQUE("hash"),
+	CONSTRAINT "transactions_transaction_nonce_unique" UNIQUE("transaction_nonce")
 );
 --> statement-breakpoint
 CREATE TABLE "user_ownership_visibility" (

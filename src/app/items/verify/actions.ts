@@ -183,13 +183,25 @@ export async function verifyCode(formData: FormData) {
 
   // Verify code
   const authCode = await db.query.authCodes.findFirst({
-    where: ({ email: emailCol, code: codeCol }, { eq, and }) =>
-      and(eq(emailCol, email), eq(codeCol, code)),
+    where: (
+      { email: emailCol, code: codeCol, isUsed: isUsedCol },
+      { eq, and }
+    ) => and(eq(emailCol, email), eq(codeCol, code), eq(isUsedCol, false)),
   });
 
-  if (!authCode || authCode.expiresAt < new Date()) {
-    throw new Error("Invalid or expired code");
+  if (!authCode) {
+    throw new Error("Invalid code");
   }
+
+  if (authCode.expiresAt < new Date()) {
+    throw new Error("Code has expired");
+  }
+
+  // Mark the code as used before proceeding
+  await db
+    .update(authCodes)
+    .set({ isUsed: true })
+    .where(eq(authCodes.id, authCode.id));
 
   // Use the robust blockchain verification that checks the entire chain
   const { isValid, error } = await verifyItemChain(db, productId);
@@ -209,9 +221,6 @@ export async function verifyCode(formData: FormData) {
     sameSite: "lax",
     path: "/",
   });
-
-  // Clean up auth code
-  await db.delete(authCodes).where(eq(authCodes.id, authCode.id));
 
   return { success: true };
 }
