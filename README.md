@@ -1,6 +1,6 @@
 # verify.supply.tf
 
-A blockchain-based digital asset verification and ownership tracking system built for SUPPLY: THE FUTURE apparel.
+A blockchain-based physical asset verification and ownership tracking system built for SUPPLY: THE FUTURE apparel.
 
 <div align="center">
 
@@ -18,14 +18,14 @@ verify.supply.tf is a robust blockchain-based verification system designed to tr
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
+| Feature                        | Description                                                         |
+| ------------------------------ | ------------------------------------------------------------------- |
 | 🔒 **Blockchain Verification** | Immutable history tracking using a custom blockchain implementation |
-| 👤 **Ownership Management** | Secure transfer system with email verification |
-| 🏷️ **NFC Integration** | Physical-digital product linkage through NFC tags |
-| 📱 **Mobile-First Design** | Responsive interface optimized for mobile verification |
-| 🔍 **Audit Trail** | Complete historical record of ownership transfers |
-| 🛡️ **Tamper Protection** | Cryptographic verification of product authenticity |
+| 👤 **Ownership Management**    | Secure transfer system with email verification                      |
+| 🏷️ **NFC Integration**         | Physical-digital product linkage through NFC tags                   |
+| 📱 **Mobile-First Design**     | Responsive interface optimized for mobile verification              |
+| 🔍 **Audit Trail**             | Complete historical record of ownership transfers                   |
+| 🛡️ **Tamper Protection**       | Cryptographic verification of product authenticity                  |
 
 ## Blockchain Architecture
 
@@ -42,7 +42,7 @@ classDiagram
         +calculateHash()
         +verifyTransaction()
     }
-    
+
     class Transaction {
         +type: string
         +itemId: string
@@ -50,7 +50,7 @@ classDiagram
         +nonce: string
         +data: object
     }
-    
+
     Block "1" *-- "many" Transaction
 ```
 
@@ -63,7 +63,7 @@ graph TB
     C -->|Valid| D{Verify Merkle Root}
     D -->|Valid| E{Verify Transactions}
     E -->|Valid| F[Block Accepted]
-    
+
     B -->|Invalid| X[Reject Block]
     C -->|Invalid| X
     D -->|Invalid| X
@@ -82,7 +82,7 @@ graph TB
     H2 --- T3[Transaction 3]
     H2 --- T4[Transaction 4]
     end
-    
+
     V[Verify Transaction] --> P[Build Proof]
     P --> C{Check Against Root}
     C -->|Match| Valid[Valid Transaction]
@@ -97,7 +97,7 @@ sequenceDiagram
     participant System
     participant Blockchain
     participant New Owner
-    
+
     Current Owner->>System: Initiate Transfer
     System->>System: Generate Transfer Nonce
     System->>New Owner: Send Confirmation Email
@@ -121,16 +121,12 @@ sequenceDiagram
 
 - **Nonce Verification**  
   64-character hex nonce prevents replay attacks
-  
 - **Timestamp Normalization**  
   Millisecond precision for reliable hashing
-  
 - **Merkle Tree Proofs**  
   Efficient transaction verification system
-  
 - **Chain Integrity**  
   Continuous block link verification
-  
 - **Data Immutability**  
   Cryptographic protection of records
 
@@ -142,30 +138,30 @@ sequenceDiagram
 ```typescript
 // Block Structure
 interface BlockData {
-    blockNumber: number;
-    timestamp: string;
-    previousHash: string;
-    merkleRoot: string;
-    blockNonce: number;
+  blockNumber: number;
+  timestamp: string;
+  previousHash: string;
+  merkleRoot: string;
+  blockNonce: number;
 }
 
 // Transaction Record
 interface TransactionData {
-    type: "create" | "transfer";
-    itemId: string;
-    timestamp: string;
-    nonce: string;
-    data: {
-        from?: { 
-            name: string;
-            email: string; 
-        };
-        to: { 
-            name: string;
-            email: string; 
-        };
-        item: ItemDetails;
+  type: "create" | "transfer";
+  itemId: string;
+  timestamp: string;
+  nonce: string;
+  data: {
+    from?: {
+      name: string;
+      email: string;
     };
+    to: {
+      name: string;
+      email: string;
+    };
+    item: ItemDetails;
+  };
 }
 ```
 
@@ -184,6 +180,7 @@ interface TransactionData {
 ### Quick Start
 
 1. Clone and install dependencies:
+
 ```bash
 git clone https://github.com/jiaweing/verify.supply.tf.git
 cd verify.supply.tf
@@ -191,18 +188,21 @@ pnpm install
 ```
 
 2. Configure environment:
+
 ```bash
 cp .env.example .env
 # Edit .env with your settings
 ```
 
 3. Initialize database:
+
 ```bash
 pnpm db:push
 pnpm db:seed
 ```
 
 4. Start development server:
+
 ```bash
 pnpm dev
 ```

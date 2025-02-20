@@ -2,6 +2,13 @@
   "name": "verify.supply.tf",
   "version": "0.1.0",
   "private": true,
+  "description": "A blockchain-based physical asset verification and ownership tracking system built for SUPPLY: THE FUTURE apparel",
+  "author": "SUPPLY: THE FUTURE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jiaweing/verify.supply.tf.git"
+  },
+  "homepage": "https://verify.supply.tf",
   "scripts": {
     "dev": "next dev",
     "turbo": "turbo run dev --parallel",

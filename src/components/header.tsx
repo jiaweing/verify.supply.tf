@@ -5,7 +5,7 @@ export default function Header() {
     <header className="flex flex-col items-center justify-center space-y-2 pb-4">
       <Image
         src="/logo.svg"
-        alt="SUPPLY: THE FUTURE - Digital supply chain verification platform logo"
+        alt="SUPPLY: THE FUTURE Logo"
         className="invert dark:invert-0"
         width={70}
         height={70}
