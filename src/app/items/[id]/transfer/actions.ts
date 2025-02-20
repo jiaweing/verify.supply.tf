@@ -35,7 +35,11 @@ export async function processTransferAction(
     throw new Error("Transfer has already been processed");
   }
 
-  if (new Date() > transfer.expiresAt) {
+  // Compare dates in UTC
+  if (
+    new Date(new Date().toISOString()) >
+    new Date(transfer.expiresAt.toISOString())
+  ) {
     throw new Error("Transfer request has expired");
   }
 
@@ -362,23 +366,61 @@ export async function transferItem(formData: FormData) {
     throw new Error("Current item data does not match blockchain record");
   }
 
-  // Prevent transferring to self
-  if (newOwnerEmail === item.originalOwnerEmail) {
-    throw new Error("You cannot transfer the item to yourself.");
+  // Get current ownership info from transaction history
+  const txHistory = await db.query.transactions.findMany({
+    where: eq(transactions.itemId, itemId),
+    with: {
+      block: true,
+    },
+    orderBy: [asc(transactions.timestamp)],
+  });
+
+  const currentOwnership = getCurrentOwner(txHistory, {
+    originalOwnerName: item.originalOwnerName,
+    originalOwnerEmail: item.originalOwnerEmail,
+    createdAt: item.createdAt,
+  });
+
+  // Prevent transferring to self using email or name
+  if (
+    newOwnerEmail === currentOwnership.currentOwnerEmail ||
+    newOwnerEmail === currentOwnership.currentOwnerName
+  ) {
+    throw new Error(
+      "Invalid transfer: Cannot transfer to current owner or their registered name"
+    );
   }
 
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  // Check for any existing pending transfers
+  const existingTransfer = await db.query.ownershipTransfers.findFirst({
+    where: and(
+      eq(ownershipTransfers.itemId, itemId),
+      eq(ownershipTransfers.isConfirmed, false)
+    ),
+  });
 
-  // Create transfer record
+  if (existingTransfer) {
+    throw new Error("There is already a pending transfer for this item");
+  }
+
+  // Convert to UTC timestamp and add 24 hours
+  // Generate normalized timestamp for expiry
+  const timestampISO = new Date().toISOString().replace(/\.\d+Z$/, ".000Z");
+  const expiresAt = new Date(
+    new Date(timestampISO).getTime() + 24 * 60 * 60 * 1000
+  );
+
+  // Create transfer record with current owner from blockchain
   const [transfer] = await db
     .insert(ownershipTransfers)
     .values({
       itemId,
-      currentOwnerEmail: item.originalOwnerEmail,
+      currentOwnerEmail: currentOwnership.currentOwnerEmail,
       newOwnerName,
       newOwnerEmail,
       expiresAt,
       isConfirmed: false,
+      createdAt: new Date(timestampISO), // Explicitly set createdAt in UTC
     })
     .returning();
 
