@@ -79,6 +79,7 @@ export function VerifyForm({
   const [turnstileToken, setTurnstileToken] = React.useState<string>("");
   const [canResend, setCanResend] = React.useState(false);
   const [resendTimer, setResendTimer] = React.useState(60);
+  const [resendAttempts, setResendAttempts] = React.useState(0);
 
   // Notify parent component of step changes
   React.useEffect(() => {
@@ -171,6 +172,7 @@ export function VerifyForm({
   async function handleResendCode() {
     try {
       setIsResending(true);
+      const backoffTime = Math.min(60 * Math.pow(2, resendAttempts), 300); // Max 5 minutes
       const formData = new FormData();
       formData.append("email", verifiedData.email!);
       formData.append("serialNumber", verifiedData.serialNumber!);
@@ -183,7 +185,8 @@ export function VerifyForm({
 
       toast.success("New verification code sent to your email");
       setCanResend(false);
-      setResendTimer(60);
+      setResendTimer(backoffTime);
+      setResendAttempts((prev) => prev + 1);
       const timer = setInterval(() => {
         setResendTimer((prev) => {
           if (prev <= 1) {

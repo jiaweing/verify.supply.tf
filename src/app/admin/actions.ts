@@ -22,7 +22,16 @@ const loginSchema = z.object({
       },
       { message: "Invalid email format" }
     ),
-  password: z.string().min(1),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    ),
 });
 
 export async function adminLoginAction(formData: FormData) {
@@ -46,10 +55,12 @@ export async function adminLoginAction(formData: FormData) {
 
     // Set cookie
     const cookieStore = await cookies();
+    // Note: Cookie signing is handled by the JWT token itself
+    // Domain restriction is handled by SameSite policy
     cookieStore.set("admin_token", token, {
-      httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: "lax",
+      httpOnly: true, // Prevent JavaScript access
+      secure: env.NODE_ENV === "production", // Require HTTPS in production
+      sameSite: "strict", // Enhanced security: only send cookie to same site
       path: "/",
       maxAge: 60 * 60 * 4, // 4 hours
     });

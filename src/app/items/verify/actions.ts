@@ -6,7 +6,7 @@ import { createSession } from "@/lib/auth";
 import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { env } from "process";
 
@@ -181,13 +181,18 @@ export async function verifyCode(formData: FormData) {
     throw new Error("Item ID is required");
   }
 
-  // Verify code
-  const authCode = await db.query.authCodes.findFirst({
-    where: (
-      { email: emailCol, code: codeCol, isUsed: isUsedCol },
-      { eq, and }
-    ) => and(eq(emailCol, email), eq(codeCol, code), eq(isUsedCol, false)),
-  });
+  // Atomically update and return the auth code
+  const [authCode] = await db
+    .update(authCodes)
+    .set({ isUsed: true })
+    .where(
+      and(
+        eq(authCodes.email, email),
+        eq(authCodes.code, code),
+        eq(authCodes.isUsed, false)
+      )
+    )
+    .returning();
 
   if (!authCode) {
     throw new Error("Invalid code");
@@ -196,12 +201,6 @@ export async function verifyCode(formData: FormData) {
   if (authCode.expiresAt < new Date()) {
     throw new Error("Code has expired");
   }
-
-  // Mark the code as used before proceeding
-  await db
-    .update(authCodes)
-    .set({ isUsed: true })
-    .where(eq(authCodes.id, authCode.id));
 
   // Use the robust blockchain verification that checks the entire chain
   const { isValid, error } = await verifyItemChain(db, productId);

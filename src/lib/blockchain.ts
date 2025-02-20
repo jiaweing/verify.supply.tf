@@ -56,7 +56,7 @@ export interface TransactionData {
   type: "create" | "transfer";
   itemId: string;
   timestamp: string;
-  nonce: string; // Add nonce for replay protection
+  nonce: string; // 64 character hex string from crypto.randomBytes(32) for replay protection
   data: {
     from?: {
       name: string;
@@ -232,6 +232,21 @@ export class Block {
     timestamp = new Date().toISOString(),
     blockNonce = 0
   ) {
+    // Validate transaction nonces
+    for (const tx of transactions) {
+      if (!/^[a-f0-9]{64}$/.test(tx.nonce)) {
+        throw new Error(
+          "Invalid transaction nonce format - must be 64 character hex string"
+        );
+      }
+    }
+    if (
+      typeof blockNonce !== "number" ||
+      blockNonce < 0 ||
+      !Number.isInteger(blockNonce)
+    ) {
+      throw new Error("Block nonce must be a non-negative integer");
+    }
     this.transactions = transactions.map((tx) => ({
       ...tx,
       timestamp: normalizeTimestamp(tx.timestamp),
@@ -463,6 +478,19 @@ export async function verifyItemChain(
   // Verify the specific item's data if it exists in the chain
   if (itemTransactions.length === 0) {
     return { isValid: false, error: "No transactions found for item" };
+  }
+
+  // Verify transaction nonce uniqueness to prevent replay attacks
+  const usedNonces = new Set<string>();
+  for (const tx of itemTransactions) {
+    const txData = tx.data as TransactionData;
+    if (usedNonces.has(txData.nonce)) {
+      return {
+        isValid: false,
+        error: `Duplicate transaction nonce found: ${txData.nonce}`,
+      };
+    }
+    usedNonces.add(txData.nonce);
   }
 
   const item = await db.query.items.findFirst({

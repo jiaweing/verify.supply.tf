@@ -10,6 +10,7 @@ export default function Footer() {
         <Link
           href="https://github.com/jiaweing/verify.supply.tf"
           target="_blank"
+          rel="noopener noreferrer"
           className="text-primary flex flex-row gap-1"
         >
           <Github className="h-4 w-4" /> <div>open-source</div>

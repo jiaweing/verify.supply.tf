@@ -1,3 +1,5 @@
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import { TransferConfirmButtons } from "@/components/transfer-confirm-buttons";
 import {
   Card,
@@ -89,7 +91,8 @@ export default async function TransferConfirmPage({
   };
 
   return (
-    <div className="container py-10 mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+    <div className="container py-10 mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] space-y-4">
+      <Header />
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Accept Transfer</CardTitle>
@@ -133,6 +136,7 @@ export default async function TransferConfirmPage({
           />
         </CardContent>
       </Card>
+      <Footer />
     </div>
   );
 }
