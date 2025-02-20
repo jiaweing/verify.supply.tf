@@ -1,3 +1,5 @@
+import { getVisibilityPreferencesAction } from "@/app/items/[id]/preferences/actions";
+
 export function maskInfo(text: string): string {
   if (!text) return text;
   if (text.includes("@")) {
@@ -13,20 +15,7 @@ export function maskInfo(text: string): string {
 }
 
 export async function fetchVisibilityPreferences(emails: string[]) {
-  const preferences = await Promise.all(
-    emails.map(async (email) => {
-      const res = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_APP_URL
-        }/api/visibility?email=${encodeURIComponent(email)}`,
-        { cache: "no-store" }
-      );
-      const data = await res.json();
-      return [email, data.visible] as [string, boolean];
-    })
-  );
-
-  return Object.fromEntries(preferences);
+  return getVisibilityPreferencesAction(emails);
 }
 
 export function shouldShowInfo(
@@ -35,6 +24,10 @@ export function shouldShowInfo(
   visibilityMap?: Record<string, boolean>
 ): boolean {
   if (!email) return false;
-  // if (currentUserEmail === email) return true;
+  // If this is the current user's email, respect their visibility preference
+  if (email === currentUserEmail) {
+    return visibilityMap?.[email] ?? false;
+  }
+  // For other users, show info if they've chosen to make their info visible
   return visibilityMap?.[email] ?? false;
 }

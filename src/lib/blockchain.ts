@@ -480,8 +480,8 @@ export async function verifyItemChain(
 
   const latestTxData = latestTx.data as TransactionData;
 
-  // The actual item data should match what's recorded in the latest transaction
-  const itemMatches =
+  // Check immutable item data (everything except ownership which is determined by transaction history)
+  const baseItemMatches =
     item.id === latestTxData.data.item.id &&
     item.serialNumber === latestTxData.data.item.serialNumber &&
     item.sku === latestTxData.data.item.sku &&
@@ -489,8 +489,6 @@ export async function verifyItemChain(
     item.weight === latestTxData.data.item.weight &&
     item.nfcSerialNumber === latestTxData.data.item.nfcSerialNumber &&
     item.orderId === latestTxData.data.item.orderId &&
-    item.originalOwnerName === latestTxData.data.item.originalOwnerName &&
-    item.originalOwnerEmail === latestTxData.data.item.originalOwnerEmail &&
     item.originalPurchaseDate.getTime() ===
       new Date(latestTxData.data.item.originalPurchaseDate).getTime() &&
     item.purchasedFrom === latestTxData.data.item.purchasedFrom &&
@@ -503,7 +501,7 @@ export async function verifyItemChain(
     item.globalKeyVersion === latestTxData.data.item.globalKeyVersion &&
     item.nfcLink === latestTxData.data.item.nfcLink;
 
-  if (!itemMatches) {
+  if (!baseItemMatches) {
     return {
       isValid: false,
       error: "Current item data does not match blockchain record",

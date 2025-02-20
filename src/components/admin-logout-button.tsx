@@ -1,5 +1,6 @@
 "use client";
 
+import { adminLogoutAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -12,14 +13,7 @@ export function AdminLogoutButton() {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/admin/logout", {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to logout");
-      }
-
+      await adminLogoutAction();
       router.push("/");
       router.refresh();
     } catch (error) {

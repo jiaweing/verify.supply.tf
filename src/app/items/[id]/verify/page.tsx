@@ -10,15 +10,16 @@ import {
 import { VerifyForm } from "@/components/verify-form";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { verifyNfcLink } from "../../verify/actions";
 
 export default function ItemVerifyPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const urlItemId = params.id as string;
   const [defaultValues, setDefaultValues] = useState<{
+    itemId?: string;
     email?: string;
     serialNumber?: string;
-    purchaseDate?: string;
   }>();
   const [isLoading, setIsLoading] = useState(true);
   const [verifyStep, setVerifyStep] = useState<"verify" | "code">("verify");
@@ -35,26 +36,21 @@ export default function ItemVerifyPage() {
       }
 
       try {
-        const res = await fetch(
-          `/api/items/verify?key=${key}&version=${version}`,
-          {
-            method: "GET",
-          }
-        );
+        const formData = new FormData();
+        formData.append("key", key);
+        formData.append("version", version);
+        const item = await verifyNfcLink({ key, version });
 
-        if (res.ok) {
-          const data = await res.json();
-          setDefaultValues({
-            email: data.email,
-            serialNumber: data.serialNumber,
-            purchaseDate: data.purchaseDate,
-          });
-          // Keep the URL itemId for verification, but validate it matches the encrypted data
-          if (data.productId !== urlItemId) {
-            console.error("Item ID mismatch between URL and encrypted data");
-            setIsLoading(false);
-            return;
-          }
+        setDefaultValues({
+          itemId: item.productId,
+          email: item.email,
+          serialNumber: item.serialNumber,
+        });
+        // Keep the URL itemId for verification, but validate it matches the encrypted data
+        if (item.productId !== urlItemId) {
+          console.error("Item ID mismatch between URL and encrypted data");
+          setIsLoading(false);
+          return;
         }
       } catch (err) {
         console.error("Error fetching item details:", err);

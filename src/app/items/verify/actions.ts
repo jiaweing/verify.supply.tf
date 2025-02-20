@@ -1,3 +1,5 @@
+"use server";
+
 import { db } from "@/db";
 import {
   authCodes,
@@ -9,19 +11,15 @@ import { createSession } from "@/lib/auth";
 import { Block, TransactionData, getCurrentOwner } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
-
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { env } from "process";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const key = searchParams.get("key");
-  const version = searchParams.get("version");
-
-  if (!key || !version) {
-    return Response.json({ error: "Missing key or version" }, { status: 400 });
-  }
+export async function verifyNfcLink(searchParams: {
+  key: string;
+  version: string;
+}) {
+  const { key, version } = searchParams;
 
   try {
     // Get the encryption key
@@ -36,25 +34,15 @@ export async function GET(request: Request) {
       });
 
       if (!recentKey) {
-        return Response.json(
-          { error: "No active encryption keys" },
-          { status: 400 }
-        );
+        throw new Error("No active encryption keys");
       }
 
-      return Response.json(
-        { error: "Please use the most recent NFC link" },
-        { status: 400 }
-      );
+      throw new Error("Please use the most recent NFC link");
     }
 
     if (globalKey.activeTo < new Date()) {
-      return Response.json(
-        {
-          error:
-            "Expired key version. Please scan the item again to get a new link.",
-        },
-        { status: 400 }
+      throw new Error(
+        "Expired key version. Please scan the item again to get a new link."
       );
     }
 
@@ -110,25 +98,79 @@ export async function GET(request: Request) {
     });
 
     if (!item) {
-      return Response.json({ error: "Item not found" }, { status: 404 });
+      throw new Error("Item not found");
     }
 
     // Get current owner info including latest transfer date
     const currentOwner = getCurrentOwner(item.transactions, item);
 
-    return Response.json({
+    return {
       productId: item.id.toString(),
       email: currentOwner.currentOwnerEmail,
       serialNumber: item.serialNumber,
       purchaseDate: currentOwner.lastTransferDate,
-    });
+    };
   } catch (err) {
     console.error("Error verifying NFC link:", err);
-    return Response.json(
-      { error: "Invalid verification key" },
-      { status: 400 }
-    );
+    throw new Error("Invalid verification key");
   }
+}
+
+export async function requestVerificationCode(formData: FormData) {
+  const email = formData.get("email")?.toString();
+  const itemId = formData.get("itemId")?.toString();
+
+  if (!email) {
+    throw new Error("Email is required");
+  }
+
+  if (!itemId) {
+    throw new Error("Item ID is required");
+  }
+
+  const item = await db.query.items.findFirst({
+    where: (items, { eq }) => eq(items.id, itemId),
+    with: {
+      latestTransaction: true,
+      transactions: {
+        with: {
+          block: true,
+        },
+      },
+    },
+  });
+
+  if (!item) {
+    throw new Error("Item not found");
+  }
+
+  // Get current owner info
+  const currentOwner = getCurrentOwner(item.transactions, item);
+
+  // Only allow verification by current owner
+  if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
+    throw new Error("Email does not match current owner");
+  }
+
+  // Generate and store auth code
+  const code = await EncryptionService.generateAuthCode();
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minute expiry
+
+  await db.insert(authCodes).values({
+    email,
+    code,
+    expiresAt,
+  });
+
+  // Send verification email
+  await sendEmail({
+    to: email,
+    type: "verify",
+    data: { code },
+  });
+
+  return { success: true };
 }
 
 // Verify blockchain integrity by checking the chain of blocks
@@ -158,9 +200,8 @@ async function verifyBlockchain(productId: string) {
     where: eq(transactions.itemId, productId),
     with: {
       block: true,
-      item: true,
     },
-    orderBy: (t, { asc }) => [asc(t.timestamp)],
+    orderBy: (tx, { asc }) => [asc(tx.timestamp)],
   });
 
   if (itemTransactions.length === 0) {
@@ -170,14 +211,14 @@ async function verifyBlockchain(productId: string) {
   // Verify each block in the chain
   for (let i = 0; i < itemTransactions.length; i++) {
     const transaction = itemTransactions[i];
-    const block = transaction.block;
-
-    if (!block) {
+    if (!transaction.block) {
       return {
         isValid: false,
         error: `Block not found for transaction ${transaction.id}`,
       };
     }
+
+    const block = transaction.block;
 
     // Create Block instance for verification using the Block class
     const blockInstance = new Block(
@@ -210,8 +251,8 @@ async function verifyBlockchain(productId: string) {
 
     // Verify chain link
     if (i > 0) {
-      const previousBlock = itemTransactions[i - 1].block!;
-      if (block.previousHash !== previousBlock.hash) {
+      const previousBlock = itemTransactions[i - 1].block;
+      if (!previousBlock || block.previousHash !== previousBlock.hash) {
         return {
           isValid: false,
           error: `Broken chain link at block ${block.blockNumber}`,
@@ -223,126 +264,50 @@ async function verifyBlockchain(productId: string) {
   return { isValid: true };
 }
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
-  const action = formData.get("action");
+export async function verifyCode(formData: FormData) {
+  const code = formData.get("code")?.toString();
+  const email = formData.get("email")?.toString();
+  const productId = formData.get("productId")?.toString();
 
-  if (action === "request-code") {
-    const email = formData.get("email") as string;
-    const productId = formData.get("productId") as string;
-
-    if (!email) {
-      return Response.json({ error: "Email is required" }, { status: 400 });
-    }
-
-    if (!productId) {
-      return Response.json({ error: "Item ID is required" }, { status: 400 });
-    }
-
-    const item = await db.query.items.findFirst({
-      where: (items, { eq }) => eq(items.id, productId),
-      with: {
-        latestTransaction: true,
-        transactions: {
-          with: {
-            block: true,
-          },
-        },
-      },
-    });
-
-    if (!item) {
-      return Response.json({ error: "Item not found" }, { status: 404 });
-    }
-
-    // Get current owner info
-    const currentOwner = getCurrentOwner(item.transactions, item);
-
-    // Only allow verification by current owner
-    if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
-      return Response.json(
-        { error: "Email does not match current owner" },
-        { status: 403 }
-      );
-    }
-
-    // Generate and store auth code
-    const code = await EncryptionService.generateAuthCode();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minute expiry
-
-    await db.insert(authCodes).values({
-      email,
-      code,
-      expiresAt,
-    });
-
-    // Send verification email
-    await sendEmail({
-      to: email,
-      type: "verify",
-      data: { code },
-    });
-
-    return Response.json({ success: true });
+  if (!code || !email) {
+    throw new Error("Code and email are required");
   }
 
-  if (action === "verify-code") {
-    const code = formData.get("code") as string;
-    const email = formData.get("email") as string;
-    const productId = formData.get("productId") as string;
-
-    if (!code || !email) {
-      return Response.json(
-        { error: "Code and email are required" },
-        { status: 400 }
-      );
-    }
-
-    if (!productId) {
-      return Response.json({ error: "Item ID is required" }, { status: 400 });
-    }
-
-    // Verify code
-    const authCode = await db.query.authCodes.findFirst({
-      where: ({ email: emailCol, code: codeCol }, { eq, and }) =>
-        and(eq(emailCol, email), eq(codeCol, code)),
-    });
-
-    if (!authCode || authCode.expiresAt < new Date()) {
-      return Response.json(
-        { error: "Invalid or expired code" },
-        { status: 403 }
-      );
-    }
-
-    // Verify blockchain integrity
-    const { isValid, error } = await verifyBlockchain(productId);
-    if (!isValid) {
-      return Response.json(
-        { error: `Blockchain verification failed: ${error}` },
-        { status: 400 }
-      );
-    }
-
-    // Create session
-    const { sessionToken, expiresAt } = await createSession(productId);
-
-    // Set session cookie
-    const cookieStore = await cookies();
-    cookieStore.set("session_token", sessionToken, {
-      expires: expiresAt,
-      httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
-
-    // Clean up auth code
-    await db.delete(authCodes).where(eq(authCodes.id, authCode.id));
-
-    return Response.json({ success: true });
+  if (!productId) {
+    throw new Error("Item ID is required");
   }
 
-  return Response.json({ error: "Invalid action" }, { status: 400 });
+  // Verify code
+  const authCode = await db.query.authCodes.findFirst({
+    where: ({ email: emailCol, code: codeCol }, { eq, and }) =>
+      and(eq(emailCol, email), eq(codeCol, code)),
+  });
+
+  if (!authCode || authCode.expiresAt < new Date()) {
+    throw new Error("Invalid or expired code");
+  }
+
+  // Verify blockchain integrity
+  const { isValid, error } = await verifyBlockchain(productId);
+  if (!isValid) {
+    throw new Error(`Blockchain verification failed: ${error}`);
+  }
+
+  // Create session
+  const { sessionToken, expiresAt } = await createSession(productId);
+
+  // Set session cookie - need to await the cookies() promise
+  const cookieStore = await cookies();
+  cookieStore.set("session_token", sessionToken, {
+    expires: expiresAt,
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+
+  // Clean up auth code
+  await db.delete(authCodes).where(eq(authCodes.id, authCode.id));
+
+  return { success: true };
 }

@@ -1,10 +1,10 @@
 "use client";
 
+import { cancelTransfer } from "@/app/items/[id]/transfer/actions";
 import { Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { env } from "../env.mjs";
 import { Button } from "./ui/button";
 
 interface CancelTransferButtonProps {
@@ -23,26 +23,18 @@ export function CancelTransferButton({
     setIsLoading(true);
 
     try {
-      const res = await fetch(
-        `${env.NEXT_PUBLIC_APP_URL}/api/items/${itemId}/transfer`,
-        {
-          method: "DELETE",
-          body: JSON.stringify({
-            transferId,
-          }),
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const formData = new FormData();
+      formData.append("itemId", itemId);
+      formData.append("transferId", transferId);
 
-      if (!res.ok) {
-        throw new Error("Failed to cancel transfer");
-      }
-
-      toast.success("Transfer cancelled");
+      await cancelTransfer(formData);
+      toast.success("Transfer invitation has been cancelled.");
       router.refresh();
     } catch (error) {
       console.error("Failed to cancel transfer:", error);
-      toast.error("Failed to cancel transfer");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cancel transfer"
+      );
     } finally {
       setIsLoading(false);
     }

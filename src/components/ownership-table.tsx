@@ -21,6 +21,12 @@ import {
   TableRow,
 } from "./ui/table";
 
+import {
+  fetchVisibilityPreferences,
+  maskInfo,
+  shouldShowInfo,
+} from "@/lib/visibility";
+
 interface OwnershipTableProps {
   item: Item & {
     transactions: (Transaction & { block: Block | null })[];
@@ -28,14 +34,14 @@ interface OwnershipTableProps {
   };
   showHistory?: boolean;
   ownerEmail?: string;
+  isAdmin?: boolean;
 }
-
-import { maskInfo, shouldShowInfo } from "@/lib/visibility";
 
 export function OwnershipTable({
   item,
   showHistory = true,
   ownerEmail,
+  isAdmin = false,
 }: OwnershipTableProps) {
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>(
     {}
@@ -65,18 +71,18 @@ export function OwnershipTable({
           emails.add(history.newOwnerEmail);
         });
 
-      // Fetch visibility preferences for all emails
-      const preferences = await Promise.all(
-        Array.from(emails).map(async (email) => {
-          const res = await fetch(
-            `/api/visibility?email=${encodeURIComponent(email)}`
-          );
-          const data = await res.json();
-          return [email, data.visible] as [string, boolean];
-        })
+      // Get visibility preferences using provided session token
+      // Get actual visibility preferences from database
+      const visibilityPrefs = await fetchVisibilityPreferences(
+        Array.from(emails)
       );
 
-      setVisibilityMap(Object.fromEntries(preferences));
+      // For admin view, override all preferences to visible
+      const finalPrefs = isAdmin
+        ? Object.fromEntries(Array.from(emails).map((email) => [email, true]))
+        : visibilityPrefs;
+
+      setVisibilityMap(finalPrefs);
       setLoading(false);
     };
 

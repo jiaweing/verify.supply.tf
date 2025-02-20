@@ -51,6 +51,11 @@ export default async function SeriesPage() {
             </CardContent>
           </Card>
         ))}
+        {seriesList.length === 0 && (
+          <div className="text-center text-muted-foreground">
+            No series found.
+          </div>
+        )}
       </div>
     </div>
   );

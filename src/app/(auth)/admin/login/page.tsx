@@ -1,5 +1,6 @@
 "use client";
 
+import { adminLoginAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
@@ -16,20 +17,17 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("email", email);
-    formData.append("password", password);
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
 
-    const res = await fetch("/api/auth/admin/login", {
-      method: "POST",
-      body: formData,
-    });
-
-    setLoading(false);
-
-    if (res.ok) {
-      router.push("/admin");
+      await adminLoginAction(formData);
       router.refresh();
+    } catch (error) {
+      console.error("Login failed:", error);
+    } finally {
+      setLoading(false);
     }
   }
 

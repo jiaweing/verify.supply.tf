@@ -1,5 +1,7 @@
 "use client";
 
+import { getSessionAction } from "@/app/(auth)/admin/actions";
+import { verifyNfcLink } from "@/app/items/verify/actions";
 import { Button } from "@/components/ui/button";
 import { Loader2, ScanFaceIcon, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,29 +26,25 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
 
       try {
         // Get current session data
-        const sessionRes = await fetch("/api/session");
-        const sessionData = await sessionRes.json();
+        const { session } = await getSessionAction();
 
         // Verify the NFC tag
-        const verifyRes = await fetch(
-          `/api/items/verify?key=${key}&version=${version}`
-        );
-        const verifyData = await verifyRes.json();
-        if (!verifyRes.ok) {
-          setIsInvalid(true);
-          toast.error("This link is invalid");
-          return;
-        }
+        const formData = new FormData();
+        formData.append("key", key);
+        formData.append("version", version);
+
+        // call verifyNfcLink function
+        const item = await verifyNfcLink({ key, version });
 
         // If we have a valid session and matching item ID, redirect to item page
-        if (sessionRes.ok && sessionData.itemId === verifyData.productId) {
-          router.push(`/items/${verifyData.productId}`);
+        if (session && session.itemId === item.productId) {
+          router.push(`/items/${item.productId}`);
           return;
         }
 
         // For any other case, proceed to verification page
         router.push(
-          `/items/${verifyData.productId}/verify?key=${key}&version=${version}`
+          `/items/${item.productId}/verify?key=${key}&version=${version}`
         );
       } catch (err) {
         console.error("Error verifying link:", err);
@@ -56,7 +54,7 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
     }
 
     verifyAndRedirect();
-  }, [key, version, router, toast]);
+  }, [key, version, router]);
 
   if (!key || !version) return null;
 

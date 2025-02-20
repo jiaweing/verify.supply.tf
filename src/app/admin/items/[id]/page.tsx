@@ -186,7 +186,7 @@ export default async function ItemPage(props: {
             <CardTitle>Ownership History</CardTitle>
           </CardHeader>
           <CardContent>
-            <OwnershipTable item={item} />
+            <OwnershipTable item={item} isAdmin={true} />
           </CardContent>
         </Card>
       </div>

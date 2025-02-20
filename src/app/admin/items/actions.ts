@@ -1,3 +1,5 @@
+"use server";
+
 import { db } from "@/db";
 import {
   blocks,
@@ -28,9 +30,8 @@ const itemSchema = z.object({
   seriesId: z.string().min(1, "Series ID is required"),
 });
 
-export async function POST(request: Request) {
+export async function createItemAction(formData: FormData) {
   try {
-    const formData = await request.formData();
     const data = {
       serialNumber: formData.get("serialNumber"),
       sku: formData.get("sku"),
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
       orderId: formData.get("orderId"),
       originalOwnerName: formData.get("originalOwnerName"),
       originalOwnerEmail: formData.get("originalOwnerEmail"),
-      purchaseDate: formData.get("purchaseDate"),
+      purchaseDate: formData.get("PurchaseDate"),
       purchasedFrom: formData.get("purchasedFrom"),
       manufactureDate: formData.get("manufactureDate"),
       producedAt: formData.get("producedAt"),
@@ -49,12 +50,8 @@ export async function POST(request: Request) {
     // Validate input
     const parsed = itemSchema.safeParse(data);
     if (!parsed.success) {
-      return Response.json(
-        {
-          error: "Validation failed",
-          details: parsed.error.issues,
-        },
-        { status: 400 }
+      throw new Error(
+        "Validation failed: " + JSON.stringify(parsed.error.issues)
       );
     }
 
@@ -129,12 +126,12 @@ export async function POST(request: Request) {
     });
 
     if (!seriesRecord) {
-      return Response.json({ error: "Series not found" }, { status: 404 });
+      throw new Error("Series not found");
     }
 
     // Check if we've reached the series limit
     if (seriesRecord.currentMintNumber >= seriesRecord.totalPieces) {
-      return Response.json({ error: "Series limit reached" }, { status: 400 });
+      throw new Error("Series limit reached");
     }
 
     // Update series mint number
@@ -266,15 +263,9 @@ export async function POST(request: Request) {
       });
     });
 
-    return Response.json(
-      { success: true, message: "Item created successfully" },
-      { status: 201 }
-    );
+    return { success: true, message: "Item created successfully" };
   } catch (error) {
     console.error("Error creating item:", error);
-    return Response.json(
-      { error: "An error occurred while creating the item" },
-      { status: 500 }
-    );
+    throw error;
   }
 }

@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { RedirectType, redirect } from "next/navigation";
 
+import { processTransferAction } from "@/app/items/[id]/transfer/actions";
 import { createSession } from "@/lib/auth";
 
 interface RedirectError extends Error {
@@ -17,29 +18,7 @@ export async function processTransfer(
   action: "confirm" | "reject"
 ) {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/items/${itemId}/transfer`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          transferId,
-          action,
-        }),
-      }
-    );
-
-    const responseData = await res.json();
-
-    if (!res.ok) {
-      const errorMessage =
-        responseData.error ||
-        `Failed to process transfer: ${res.status} ${res.statusText}`;
-      console.error("Transfer error:", errorMessage);
-      throw new Error(errorMessage);
-    }
+    await processTransferAction(itemId, transferId, action);
 
     if (action === "confirm") {
       // Create session for new owner

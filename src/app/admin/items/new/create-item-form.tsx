@@ -1,5 +1,6 @@
 "use client";
 
+import { createItemAction } from "@/app/admin/items/actions";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,13 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { env } from "@/env.mjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
+import { getAllSeries, getSeriesSkus } from "../../series/[id]/actions";
 
 interface Series {
   id: number;
@@ -84,30 +86,20 @@ export function CreateItemForm() {
   const seriesInfo =
     seriesList.find((s) => s.id === Number(selectedSeries)) || null;
 
-  // Fetch series list on mount
+  // Load series list on mount
   useEffect(() => {
-    fetch("/api/series/all")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.error) {
-          setSeriesList(data);
-        }
-      })
+    getAllSeries()
+      .then(setSeriesList)
       .catch((error) => {
         console.error("Error fetching series list:", error);
       });
   }, []);
 
-  // Fetch SKUs when series is selected
+  // Load SKUs when series is selected
   useEffect(() => {
     if (selectedSeries) {
-      fetch(`${env.NEXT_PUBLIC_APP_URL}/api/series/${selectedSeries}/skus`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.error) {
-            setSkus(data);
-          }
-        })
+      getSeriesSkus(selectedSeries.toString())
+        .then(setSkus)
         .catch((error) => {
           console.error("Error fetching SKUs:", error);
         });
@@ -117,38 +109,62 @@ export function CreateItemForm() {
   }, [selectedSeries]);
 
   async function onSubmit(data: ItemFormValues) {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      // Convert all values to strings
-      const stringValue = value.toString();
+    try {
+      const formData = new FormData();
 
-      // Convert dates to UTC for API
-      if (key === "purchaseDate" || key === "manufactureDate") {
-        const date = new Date(stringValue);
-        const utcDate = new Date(
-          Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-        );
-        formData.append(key, utcDate.toISOString());
-      } else {
-        formData.append(key, stringValue);
+      if (!data.purchaseDate || !data.manufactureDate) {
+        throw new Error("Date fields are required");
       }
-    });
 
-    const response = await fetch("/api/items", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      form.setError("root", {
-        message: error.message || "Something went wrong",
+      // Add all non-date fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== "purchaseDate" && key !== "manufactureDate") {
+          formData.append(key, value.toString());
+        }
       });
-      return;
-    }
 
-    router.push("/admin");
-    router.refresh();
+      // Handle date fields with correct casing
+      const purchaseDate = new Date(data.purchaseDate);
+      const manufactureDate = new Date(data.manufactureDate);
+
+      formData.append(
+        "PurchaseDate",
+        new Date(
+          Date.UTC(
+            purchaseDate.getFullYear(),
+            purchaseDate.getMonth(),
+            purchaseDate.getDate()
+          )
+        ).toISOString()
+      );
+      formData.append(
+        "manufactureDate",
+        new Date(
+          Date.UTC(
+            manufactureDate.getFullYear(),
+            manufactureDate.getMonth(),
+            manufactureDate.getDate()
+          )
+        ).toISOString()
+      );
+
+      // Debug log
+      console.log("Form data before submission:");
+      formData.forEach((value, key) => {
+        console.log(`${key}: ${value}`);
+      });
+
+      await createItemAction(formData);
+      router.push("/admin");
+      router.refresh();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Something went wrong";
+      form.setError("root", {
+        message: errorMessage,
+      });
+      toast.error(`[ Server ] Error: ${errorMessage}`);
+    }
   }
 
   return (

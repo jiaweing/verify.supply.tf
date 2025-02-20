@@ -1,10 +1,10 @@
 "use client";
 
+import { transferItem } from "@/app/items/[id]/transfer/actions";
 import { AlertCircle, Loader2, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { env } from "../env.mjs";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -33,29 +33,18 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch(
-        `${env.NEXT_PUBLIC_APP_URL}/api/items/${itemId}/transfer`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            newOwnerName,
-            newOwnerEmail,
-          }),
-        }
-      );
+      const formData = new FormData();
+      formData.append("itemId", itemId);
+      formData.append("newOwnerName", newOwnerName);
+      formData.append("newOwnerEmail", newOwnerEmail);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to transfer item");
-      }
+      await transferItem(formData);
 
       setIsOpen(false);
-      toast.success(
-        "Transfer invitation sent. The recipient will receive an email with instructions to accept ownership within 24 hours."
-      );
+      toast.success("Transfer invitation sent.", {
+        description:
+          "The recipient will receive an email with instructions to accept ownership within 24 hours.",
+      });
       router.refresh();
     } catch (error) {
       console.error("Failed to transfer item:", error);

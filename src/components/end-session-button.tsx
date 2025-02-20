@@ -1,5 +1,6 @@
 "use client";
 
+import { logoutAction } from "@/app/(auth)/admin/actions";
 import { Loader2, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -12,14 +13,7 @@ export function EndSessionButton() {
   const handleEndSession = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/logout", {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to end session");
-      }
-
+      await logoutAction();
       router.push("/");
       router.refresh();
     } catch (error) {

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  requestVerificationCode,
+  verifyCode,
+} from "@/app/items/verify/actions";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -124,23 +128,15 @@ export function VerifyForm({
         });
 
         // Request verification code
-        const res = await fetch("/api/auth/request-code", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: values.email,
-            serialNumber: values.serialNumber,
-            key: effectiveKey,
-            version: effectiveVersion,
-            itemId,
-            turnstileToken,
-          }),
-        });
+        const formData = new FormData();
+        formData.append("email", values.email);
+        formData.append("serialNumber", values.serialNumber);
+        if (effectiveKey) formData.append("key", effectiveKey);
+        if (effectiveVersion) formData.append("version", effectiveVersion);
+        if (itemId) formData.append("itemId", itemId);
+        formData.append("turnstileToken", turnstileToken);
 
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || "Failed to request verification code");
-        }
+        await requestVerificationCode(formData);
 
         toast.success("Check your email for the verification code");
         setStep("code");
@@ -151,27 +147,16 @@ export function VerifyForm({
         }
 
         // Verify code and get session
-        const res = await fetch("/api/auth/verify-code", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: verifiedData.email!,
-            code: values.code,
-            itemId: itemId!,
-          }),
-        });
+        const formData = new FormData();
+        formData.append("email", verifiedData.email!);
+        formData.append("code", values.code);
+        formData.append("productId", itemId!);
 
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || "Failed to verify code");
-        }
-
-        const data = await res.json();
+        await verifyCode(formData);
         if (onSuccess) {
-          onSuccess(data);
+          onSuccess({ itemId: itemId!, sessionToken: "verified" });
         } else {
-          const itemPath = itemId || data.item.id;
-          router.push(`/items/${itemPath}`);
+          router.push(`/items/${itemId}`);
         }
       }
     } catch (error) {
@@ -186,23 +171,15 @@ export function VerifyForm({
   async function handleResendCode() {
     try {
       setIsResending(true);
-      const res = await fetch("/api/auth/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: verifiedData.email!,
-          serialNumber: verifiedData.serialNumber!,
-          key: effectiveKey,
-          version: effectiveVersion,
-          itemId,
-          turnstileToken,
-        }),
-      });
+      const formData = new FormData();
+      formData.append("email", verifiedData.email!);
+      formData.append("serialNumber", verifiedData.serialNumber!);
+      if (effectiveKey) formData.append("key", effectiveKey);
+      if (effectiveVersion) formData.append("version", effectiveVersion);
+      if (itemId) formData.append("itemId", itemId);
+      formData.append("turnstileToken", turnstileToken);
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to resend code");
-      }
+      await requestVerificationCode(formData);
 
       toast.success("New verification code sent to your email");
       setCanResend(false);

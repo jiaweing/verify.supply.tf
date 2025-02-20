@@ -41,7 +41,7 @@ export default async function RootLayout({
               <ThemeToggle />
             </div>
           </div>
-          <Toaster position="top-center" />
+          <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
     </html>

@@ -286,19 +286,23 @@ export default async function ItemVerificationPage(props: {
         </CardHeader>
         <CardContent>
           {sessionToken && (
-            <div className="mb-4">
-              <VisibilitySection
-                email={
-                  getCurrentOwner(item.transactions, item).currentOwnerEmail
-                }
+            <>
+              <div className="mb-4">
+                <VisibilitySection
+                  email={
+                    getCurrentOwner(item.transactions, item).currentOwnerEmail
+                  }
+                  itemId={params.id}
+                  sessionToken={sessionToken}
+                />
+              </div>
+              <OwnershipTable
+                item={item}
+                showHistory={showHistory}
+                ownerEmail={currentOwner.currentOwnerEmail}
               />
-            </div>
+            </>
           )}
-          <OwnershipTable
-            item={item}
-            showHistory={showHistory}
-            ownerEmail={currentOwner.currentOwnerEmail}
-          />
         </CardContent>
       </Card>
 

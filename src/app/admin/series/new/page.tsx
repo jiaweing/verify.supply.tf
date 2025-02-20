@@ -1,6 +1,6 @@
-import { env } from "@/env.mjs";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { createSeriesAction } from "../actions";
 import { SeriesForm } from "../series-form";
 
 export default async function NewSeriesPage() {
@@ -12,14 +12,7 @@ export default async function NewSeriesPage() {
   async function handleSeriesFormAction(formData: FormData) {
     "use server";
 
-    const response = await fetch(`${env.NEXT_PUBLIC_APP_URL}/api/series`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to create series");
-    }
+    await createSeriesAction(formData);
   }
 
   return (

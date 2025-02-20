@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Sku } from "@/db/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const skuFormSchema = z.object({
@@ -46,6 +47,9 @@ export function SkuForm({ action, initialData, seriesId }: SkuFormProps) {
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
     }
   };
 

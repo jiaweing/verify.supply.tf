@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  getVisibilityPreferencesAction,
+  updateItemPreferencesAction,
+} from "@/app/items/[id]/preferences/actions";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
@@ -7,11 +11,15 @@ import { toast } from "sonner";
 
 interface VisibilityToggleProps {
   email: string;
+  itemId: string;
+  sessionToken: string;
   onVisibilityChange?: (visible: boolean) => void;
 }
 
 export function VisibilityToggle({
   email,
+  itemId,
+  sessionToken,
   onVisibilityChange,
 }: VisibilityToggleProps) {
   const [visible, setVisible] = useState(false);
@@ -20,17 +28,8 @@ export function VisibilityToggle({
   useEffect(() => {
     const fetchVisibility = async () => {
       try {
-        const res = await fetch(
-          `/api/visibility?email=${encodeURIComponent(email)}`,
-          {
-            credentials: "include",
-          }
-        );
-        if (!res.ok) {
-          throw new Error("Failed to fetch visibility settings");
-        }
-        const data = await res.json();
-        setVisible(data.visible);
+        const preferences = await getVisibilityPreferencesAction([email]);
+        setVisible(preferences[email] ?? false);
       } catch (error) {
         console.error("Error fetching visibility:", error);
         toast.error("Failed to load visibility settings");
@@ -44,22 +43,9 @@ export function VisibilityToggle({
 
   const handleToggle = async (checked: boolean) => {
     try {
-      const res = await fetch("/api/visibility", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          visible: checked,
-        }),
+      await updateItemPreferencesAction(itemId, sessionToken, {
+        showOwnershipHistory: checked,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update visibility");
-      }
 
       setVisible(checked);
       onVisibilityChange?.(checked);
