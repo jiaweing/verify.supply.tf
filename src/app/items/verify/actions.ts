@@ -113,18 +113,18 @@ export async function verifyNfcLink(searchParams: {
 
 export async function requestVerificationCode(formData: FormData) {
   const email = formData.get("email")?.toString();
-  const itemId = formData.get("itemId")?.toString();
+  const serialNumber = formData.get("serialNumber")?.toString();
 
   if (!email) {
     throw new Error("Email is required");
   }
 
-  if (!itemId) {
-    throw new Error("Item ID is required");
+  if (!serialNumber) {
+    throw new Error("Serial number is required");
   }
 
   const item = await db.query.items.findFirst({
-    where: (items, { eq }) => eq(items.id, itemId),
+    where: (items, { eq }) => eq(items.serialNumber, serialNumber),
     with: {
       latestTransaction: true,
       transactions: {
@@ -165,7 +165,10 @@ export async function requestVerificationCode(formData: FormData) {
     data: { code },
   });
 
-  return { success: true };
+  return {
+    success: true,
+    itemId: item.id,
+  };
 }
 
 export async function verifyCode(formData: FormData) {

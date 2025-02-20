@@ -39,7 +39,9 @@ const verifySchema = z.object({
   turnstileToken: z.string().optional(),
 });
 
-type FormData = z.infer<typeof verifySchema>;
+type FormData = z.infer<typeof verifySchema> & {
+  itemId?: string;
+};
 
 interface VerifyFormProps {
   defaultValues?: Partial<FormData>;
@@ -122,22 +124,22 @@ export function VerifyForm({
           return;
         }
 
-        // Store the verified data before requesting code
-        setVerifiedData({
-          email: values.email,
-          serialNumber: values.serialNumber,
-        });
-
-        // Request verification code
+        // Request verification code and store response data
         const formData = new FormData();
         formData.append("email", values.email);
         formData.append("serialNumber", values.serialNumber);
         if (effectiveKey) formData.append("key", effectiveKey);
         if (effectiveVersion) formData.append("version", effectiveVersion);
-        if (itemId) formData.append("itemId", itemId);
         formData.append("turnstileToken", turnstileToken);
 
-        await requestVerificationCode(formData);
+        const response = await requestVerificationCode(formData);
+
+        // Store the verified data and item ID
+        setVerifiedData({
+          email: values.email,
+          serialNumber: values.serialNumber,
+          itemId: response.itemId,
+        });
 
         toast.success("Check your email for the verification code");
         setStep("code");
@@ -151,7 +153,7 @@ export function VerifyForm({
         const formData = new FormData();
         formData.append("email", verifiedData.email!);
         formData.append("code", values.code);
-        formData.append("productId", itemId!);
+        formData.append("productId", verifiedData.itemId!);
 
         await verifyCode(formData);
         if (onSuccess) {
