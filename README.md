@@ -1,10 +1,8 @@
+# verify.supply.tf
+
+A blockchain-based digital asset verification and ownership tracking system built for SUPPLY: THE FUTURE apparel.
+
 <div align="center">
-
-# 🔐 verify.supply.tf
-
-A blockchain-based verification system for tracking and verifying product authenticity and ownership.
-
-Used in <a href="https://supply.tf">SUPPLY: THE FUTURE</a> apparel.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -14,58 +12,168 @@ Used in <a href="https://supply.tf">SUPPLY: THE FUTURE</a> apparel.
 
 </div>
 
----
+## Overview
 
-## 🌟 Features
+verify.supply.tf is a robust blockchain-based verification system designed to track and verify the authenticity and ownership of physical products. It creates an immutable digital record for each item, enabling secure ownership transfers and authenticity verification through NFC integration.
 
-<div align="center">
+## Features
 
-| Feature                        | Description                                 |
-| ------------------------------ | ------------------------------------------- |
-| 🔒 **Blockchain Verification** | Immutable history tracking for each item    |
-| 👤 **Ownership Tracking**      | Complete chain of custody through transfers |
-| 🛡️ **Tamper Detection**        | Identifies unauthorized modifications       |
-| 📱 **NFC Integration**         | Physical-digital item linkage               |
+| Feature | Description |
+|---------|-------------|
+| 🔒 **Blockchain Verification** | Immutable history tracking using a custom blockchain implementation |
+| 👤 **Ownership Management** | Secure transfer system with email verification |
+| 🏷️ **NFC Integration** | Physical-digital product linkage through NFC tags |
+| 📱 **Mobile-First Design** | Responsive interface optimized for mobile verification |
+| 🔍 **Audit Trail** | Complete historical record of ownership transfers |
+| 🛡️ **Tamper Protection** | Cryptographic verification of product authenticity |
 
-</div>
+## Blockchain Architecture
 
-## 🏗️ System Architecture
+### Block Structure
 
 ```mermaid
-graph TD
-    A[Physical Item] -->|NFC Tag| B[Digital Certificate]
-    B --> C[Blockchain]
-    C -->|Creation Block| D[Genesis Transaction]
-    C -->|Transfer Blocks| E[Ownership History]
-    E -->|Verification| F[Current State]
+classDiagram
+    class Block {
+        +blockNumber: number
+        +timestamp: string
+        +previousHash: string
+        +merkleRoot: string
+        +blockNonce: number
+        +calculateHash()
+        +verifyTransaction()
+    }
+    
+    class Transaction {
+        +type: string
+        +itemId: string
+        +timestamp: string
+        +nonce: string
+        +data: object
+    }
+    
+    Block "1" *-- "many" Transaction
 ```
 
-### 🔗 Blockchain Implementation
+### Chain Verification Flow
 
-<details>
-<summary>Click to expand</summary>
+```mermaid
+graph TB
+    A[New Block] -->|Hash| B{Verify Previous Hash}
+    B -->|Valid| C{Check Block Number}
+    C -->|Valid| D{Verify Merkle Root}
+    D -->|Valid| E{Verify Transactions}
+    E -->|Valid| F[Block Accepted]
+    
+    B -->|Invalid| X[Reject Block]
+    C -->|Invalid| X
+    D -->|Invalid| X
+    E -->|Invalid| X
+```
 
-#### 📦 Blocks
+### Merkle Tree Implementation
 
-- Single transaction per block
-- Cryptographic hash chaining
-- Merkle tree verification
+```mermaid
+graph TB
+    subgraph Merkle Tree
+    R[Root Hash] --- H1[Hash 1-2]
+    R --- H2[Hash 3-4]
+    H1 --- T1[Transaction 1]
+    H1 --- T2[Transaction 2]
+    H2 --- T3[Transaction 3]
+    H2 --- T4[Transaction 4]
+    end
+    
+    V[Verify Transaction] --> P[Build Proof]
+    P --> C{Check Against Root}
+    C -->|Match| Valid[Valid Transaction]
+    C -->|No Match| Invalid[Invalid Transaction]
+```
 
-#### 📝 Transactions
+### Ownership Transfer Process
 
-- Creation records
-- Transfer records
-- Hashed data storage
+```mermaid
+sequenceDiagram
+    participant Current Owner
+    participant System
+    participant Blockchain
+    participant New Owner
+    
+    Current Owner->>System: Initiate Transfer
+    System->>System: Generate Transfer Nonce
+    System->>New Owner: Send Confirmation Email
+    New Owner->>System: Confirm Transfer
+    System->>Blockchain: Create Transfer Block
+    Blockchain->>Blockchain: Verify Chain Integrity
+    Blockchain->>System: Confirm Transfer
+    System->>Current Owner: Send Transfer Complete
+    System->>New Owner: Send Ownership Confirmation
+```
 
-#### ✅ Verification
+## Technical Implementation
 
-- Chain integrity checks
-- Transaction validation
-- State verification
+### Core Components
 
-</details>
+<table>
+<tr>
+<td width="50%">
 
-## 🚀 Quick Start
+#### 🔒 Security Features
+
+- **Nonce Verification**  
+  64-character hex nonce prevents replay attacks
+  
+- **Timestamp Normalization**  
+  Millisecond precision for reliable hashing
+  
+- **Merkle Tree Proofs**  
+  Efficient transaction verification system
+  
+- **Chain Integrity**  
+  Continuous block link verification
+  
+- **Data Immutability**  
+  Cryptographic protection of records
+
+</td>
+<td width="50%">
+
+#### 🏗️ Data Structures
+
+```typescript
+// Block Structure
+interface BlockData {
+    blockNumber: number;
+    timestamp: string;
+    previousHash: string;
+    merkleRoot: string;
+    blockNonce: number;
+}
+
+// Transaction Record
+interface TransactionData {
+    type: "create" | "transfer";
+    itemId: string;
+    timestamp: string;
+    nonce: string;
+    data: {
+        from?: { 
+            name: string;
+            email: string; 
+        };
+        to: { 
+            name: string;
+            email: string; 
+        };
+        item: ItemDetails;
+    };
+}
+```
+
+</td>
+</tr>
+</table>
+
+## Setup and Installation
 
 ### Prerequisites
 
@@ -73,134 +181,42 @@ graph TD
 - PostgreSQL 15+
 - pnpm (recommended)
 
-### 🔧 Setup
+### Quick Start
 
-1. **Clone & Install**
-
+1. Clone and install dependencies:
 ```bash
 git clone https://github.com/jiaweing/verify.supply.tf.git
 cd verify.supply.tf
 pnpm install
 ```
 
-2. **Configure Environment**
-
+2. Configure environment:
 ```bash
 cp .env.example .env
 # Edit .env with your settings
 ```
 
-3. **Initialize Database**
-
+3. Initialize database:
 ```bash
 pnpm db:push
-
-# seed initial admin user and key
 pnpm db:seed
 ```
 
-4. **Start Development**
-
+4. Start development server:
 ```bash
 pnpm dev
 ```
 
-## 🔍 Verification Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant App
-    participant Blockchain
-    participant Database
-
-    User->>App: Scan NFC Tag
-    App->>Blockchain: Fetch Chain
-    Blockchain->>App: Return History
-    App->>App: Verify Chain
-    App->>Database: Get Item Details
-    App->>User: Show Verification
-```
-
-## 🔐 Security Features
-
-| Feature                     | Description                              |
-| --------------------------- | ---------------------------------------- |
-| 🔗 **Blockchain Integrity** | Every change recorded in immutable chain |
-| 📧 **Email Verification**   | Two-factor transfer confirmation         |
-| ⏱️ **Time Limits**          | Expiring transfer requests               |
-| 🔒 **Encryption**           | Secure item data storage                 |
-| 📱 **NFC Authentication**   | Physical verification link               |
-
-## 📚 API Documentation
-
-### Item Verification
-
-```typescript
-GET /api/items/:id         // Get item details
-POST /api/items/:id/verify // Verify authenticity
-GET /api/items/:id/chain   // Get blockchain history
-```
-
-### Ownership Transfer
-
-```typescript
-POST /api/items/:id/transfer  // Start transfer
-PUT /api/items/:id/transfer   // Confirm transfer
-```
-
-## 🧪 Testing
-
-```bash
-# Run unit tests
-pnpm test
-
-# Run E2E tests
-pnpm test:e2e
-```
-
-## 🚀 Deployment
-
-### Using Docker
-
-```bash
-# Build and run containers
-docker-compose up -d
-```
-
-### Manual Deployment
-
-```bash
-pnpm build
-pnpm start
-```
-
-## 🤝 Contributing
-
-1. Fork repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Open pull request
-
-## 📄 License
+## License
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 
-### Key Points:
-
-- ✅ Freedom to use, modify, and distribute
-- ✅ Source code must be made available when the software is distributed
-- ✅ Network use counts as distribution
-- ✅ Changes must be shared under the same license
-- ✅ Modifications must state significant changes made
-
-See the [LICENSE](LICENSE) file for the full text of the AGPLv3 license.
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-Built with ❤️ by <a href="https://supply.tf">SUPPLY: THE FUTURE</a>
+Built with ❤️ for <a href="https://supply.tf">SUPPLY: THE FUTURE</a>
 
 </div>
