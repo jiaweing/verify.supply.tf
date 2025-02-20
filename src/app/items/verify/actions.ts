@@ -1,14 +1,9 @@
 "use server";
 
 import { db } from "@/db";
-import {
-  authCodes,
-  globalEncryptionKeys,
-  items,
-  transactions,
-} from "@/db/schema";
+import { authCodes, globalEncryptionKeys } from "@/db/schema";
 import { createSession } from "@/lib/auth";
-import { Block, TransactionData, getCurrentOwner } from "@/lib/blockchain";
+import { getCurrentOwner, verifyItemChain } from "@/lib/blockchain";
 import { sendEmail } from "@/lib/email";
 import { EncryptionService } from "@/lib/encryption";
 import { eq } from "drizzle-orm";
@@ -173,97 +168,6 @@ export async function requestVerificationCode(formData: FormData) {
   return { success: true };
 }
 
-// Verify blockchain integrity by checking the chain of blocks
-async function verifyBlockchain(productId: string) {
-  // Get item with its latest transaction and associated block
-  const item = await db.query.items.findFirst({
-    where: eq(items.id, productId),
-    with: {
-      latestTransaction: {
-        with: {
-          block: true,
-        },
-      },
-    },
-  });
-
-  if (!item) {
-    return { isValid: false, error: "Item not found" };
-  }
-
-  if (!item.latestTransaction) {
-    return { isValid: false, error: "No transaction history found" };
-  }
-
-  // Get all transactions for this item
-  const itemTransactions = await db.query.transactions.findMany({
-    where: eq(transactions.itemId, productId),
-    with: {
-      block: true,
-    },
-    orderBy: (tx, { asc }) => [asc(tx.timestamp)],
-  });
-
-  if (itemTransactions.length === 0) {
-    return { isValid: false, error: "No transactions found" };
-  }
-
-  // Verify each block in the chain
-  for (let i = 0; i < itemTransactions.length; i++) {
-    const transaction = itemTransactions[i];
-    if (!transaction.block) {
-      return {
-        isValid: false,
-        error: `Block not found for transaction ${transaction.id}`,
-      };
-    }
-
-    const block = transaction.block;
-
-    // Create Block instance for verification using the Block class
-    const blockInstance = new Block(
-      Number(block.blockNumber),
-      block.previousHash,
-      [transaction.data as TransactionData],
-      block.timestamp.toISOString(),
-      Number(block.nonce)
-    );
-
-    const computedBlockHash = blockInstance.calculateHash();
-
-    if (computedBlockHash !== block.hash) {
-      return {
-        isValid: false,
-        error: `Invalid block hash at block ${block.blockNumber}`,
-      };
-    }
-
-    // For single-transaction blocks, the transaction hash should match the merkle root
-    const merkleTree = blockInstance.getMerkleTree();
-    const merkleRoot = merkleTree.getRoot();
-
-    if (merkleRoot !== block.merkleRoot) {
-      return {
-        isValid: false,
-        error: `Invalid merkle root at block ${block.blockNumber}`,
-      };
-    }
-
-    // Verify chain link
-    if (i > 0) {
-      const previousBlock = itemTransactions[i - 1].block;
-      if (!previousBlock || block.previousHash !== previousBlock.hash) {
-        return {
-          isValid: false,
-          error: `Broken chain link at block ${block.blockNumber}`,
-        };
-      }
-    }
-  }
-
-  return { isValid: true };
-}
-
 export async function verifyCode(formData: FormData) {
   const code = formData.get("code")?.toString();
   const email = formData.get("email")?.toString();
@@ -287,8 +191,8 @@ export async function verifyCode(formData: FormData) {
     throw new Error("Invalid or expired code");
   }
 
-  // Verify blockchain integrity
-  const { isValid, error } = await verifyBlockchain(productId);
+  // Use the robust blockchain verification that checks the entire chain
+  const { isValid, error } = await verifyItemChain(db, productId);
   if (!isValid) {
     throw new Error(`Blockchain verification failed: ${error}`);
   }
