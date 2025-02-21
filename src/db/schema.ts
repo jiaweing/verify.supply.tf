@@ -12,6 +12,18 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+// Short URLs table
+export const shortUrls = pgTable("short_urls", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  originalUrl: varchar("original_url", { length: 255 }).notNull(),
+  shortPath: uuid("short_path").defaultRandom().unique().notNull(),
+  itemId: uuid("item_id")
+    .references(() => items.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Admin users table
 export const adminUsers = pgTable("admin_users", {
   id: serial("id").primaryKey(),
@@ -175,6 +187,7 @@ export const itemRelations = relations(items, ({ many, one }) => ({
     relationName: "ownershipHistory",
   }),
   sessions: many(sessions),
+  shortUrls: many(shortUrls),
   sku: one(skus, {
     fields: [items.sku],
     references: [skus.code],
@@ -186,6 +199,13 @@ export const itemRelations = relations(items, ({ many, one }) => ({
   latestTransaction: one(transactions, {
     fields: [items.latestTransactionId],
     references: [transactions.id],
+  }),
+}));
+
+export const shortUrlRelations = relations(shortUrls, ({ one }) => ({
+  item: one(items, {
+    fields: [shortUrls.itemId],
+    references: [items.id],
   }),
 }));
 
@@ -213,6 +233,7 @@ export type Sku = InferSelectModel<typeof skus>;
 export type Block = InferSelectModel<typeof blocks>;
 export type Transaction = InferSelectModel<typeof transactions>;
 export type Item = InferSelectModel<typeof items>;
+export type ShortUrl = InferSelectModel<typeof shortUrls>;
 export type OwnershipTransfer = InferSelectModel<typeof ownershipTransfers>;
 export type UserOwnershipVisibility = InferSelectModel<
   typeof userOwnershipVisibility

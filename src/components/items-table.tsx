@@ -29,6 +29,7 @@ interface Item {
   mintNumber: string;
   originalOwnerName: string;
   nfcLink: string;
+  shortUrl?: string;
 }
 
 interface ItemsTableProps {
@@ -115,6 +116,7 @@ export function ItemsTable({ items }: ItemsTableProps) {
                 mintNumber={item.mintNumber}
                 originalOwnerName={item.originalOwnerName}
                 nfcLink={item.nfcLink}
+                shortUrl={item.shortUrl}
               />
             ))}
             {items.length === 0 && (

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy, ExternalLink, LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ interface ClickableTableRowProps {
   mintNumber: string;
   originalOwnerName: string;
   nfcLink: string;
+  shortUrl?: string;
 }
 
 export function ClickableTableRow({
@@ -23,6 +24,7 @@ export function ClickableTableRow({
   mintNumber,
   originalOwnerName,
   nfcLink,
+  shortUrl,
 }: ClickableTableRowProps) {
   const router = useRouter();
 
@@ -37,24 +39,48 @@ export function ClickableTableRow({
       <TableCell>{originalOwnerName}</TableCell>
       <TableCell>
         <div
-          className="flex items-center gap-2"
+          className="flex flex-col gap-2"
           onClick={(e) => e.stopPropagation()}
         >
-          <Button variant="outline" size="sm" asChild>
-            <Link href={nfcLink} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(nfcLink);
-              toast.success("Link copied to clipboard");
-            }}
-          >
-            <Copy className="h-4 w-4 text-muted-foreground" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={nfcLink} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(nfcLink);
+                toast.success("NFC Link copied to clipboard");
+              }}
+            >
+              <Copy className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            <span className="text-sm text-muted-foreground">NFC Link</span>
+          </div>
+
+          {shortUrl && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={shortUrl} target="_blank" rel="noopener noreferrer">
+                  <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(shortUrl);
+                  toast.success("Short URL copied to clipboard");
+                }}
+              >
+                <Copy className="h-4 w-4 text-muted-foreground" />
+              </Button>
+              <span className="text-sm text-muted-foreground">Short URL</span>
+            </div>
+          )}
         </div>
       </TableCell>
     </TableRow>
