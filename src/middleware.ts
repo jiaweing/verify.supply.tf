@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "./env.mjs";
-import { apiRateLimiter, authRateLimiter } from "./lib/rate-limit";
+import { authRateLimiter } from "./lib/rate-limit";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
@@ -51,21 +51,6 @@ export async function middleware(request: NextRequest) {
   // Apply rate limiting for authentication endpoints
   if (request.nextUrl.pathname.startsWith("/admin/login")) {
     const rateLimitResult = await authRateLimiter.check(request, 20);
-    if (!rateLimitResult.success) {
-      return new NextResponse("Too Many Requests", {
-        status: 429,
-        headers: {
-          "Retry-After": Math.ceil(
-            (rateLimitResult.reset.getTime() - Date.now()) / 1000
-          ).toString(),
-        },
-      });
-    }
-  }
-
-  // Apply rate limiting for API endpoints
-  if (request.nextUrl.pathname.startsWith("/api/")) {
-    const rateLimitResult = await apiRateLimiter.check(request, 100);
     if (!rateLimitResult.success) {
       return new NextResponse("Too Many Requests", {
         status: 429,
