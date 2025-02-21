@@ -96,9 +96,9 @@ export async function verifyNfcLink(searchParams: {
     const item = await db.query.items.findFirst({
       where: (items, { and, eq }) =>
         and(
-          eq(items.id, verifiedResult.data!.itemId),
-          eq(items.serialNumber, verifiedResult.data!.serialNumber),
-          eq(items.nfcSerialNumber, verifiedResult.data!.nfcSerialNumber)
+          eq(items.id, verifiedResult.data?.itemId ?? ''),
+          eq(items.serialNumber, verifiedResult.data?.serialNumber ?? ''),
+          eq(items.nfcSerialNumber, verifiedResult.data?.nfcSerialNumber ?? '')
         ),
       with: {
         latestTransaction: true,
