@@ -29,7 +29,9 @@ export function VisibilityToggle({
     const fetchVisibility = async () => {
       try {
         const preferences = await getVisibilityPreferencesAction([email]);
-        setVisible(preferences[email] ?? false);
+        setVisible(
+          preferences.success ? preferences.data?.[email] ?? false : false
+        );
       } catch (error) {
         console.error("Error fetching visibility:", error);
         toast.error("Failed to load visibility settings");
@@ -43,9 +45,12 @@ export function VisibilityToggle({
 
   const handleToggle = async (checked: boolean) => {
     try {
-      await updateItemPreferencesAction(itemId, sessionToken, {
+      const result = await updateItemPreferencesAction(itemId, sessionToken, {
         showOwnershipHistory: checked,
       });
+      if (!result.success) {
+        toast.error(result.error);
+      }
 
       setVisible(checked);
       onVisibilityChange?.(checked);

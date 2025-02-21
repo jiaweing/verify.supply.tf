@@ -42,14 +42,18 @@ export default function ItemVerifyPage() {
         formData.append("key", key);
         formData.append("version", version);
         const item = await verifyNfcLink({ key, version });
+        if (!item.success) {
+          console.error("Verification failed");
+          setIsLoading(false);
+        }
 
         setDefaultValues({
-          itemId: item.productId,
-          email: item.email,
-          serialNumber: item.serialNumber,
+          itemId: item.data?.productId,
+          email: item.data?.email,
+          serialNumber: item?.data?.serialNumber,
         });
         // Keep the URL itemId for verification, but validate it matches the encrypted data
-        if (item.productId !== urlItemId) {
+        if (item.data?.productId !== urlItemId) {
           console.error("Verification failed");
           setIsLoading(false);
           return;

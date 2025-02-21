@@ -13,7 +13,11 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SeriesForm } from "../series-form";
 import { SkuForm } from "../sku-form";
-import { createSku, updateSeries, updateSku } from "./actions";
+import {
+  createSkuAction,
+  updateSeriesAction,
+  updateSkuAction,
+} from "./actions";
 
 export async function generateMetadata(props: {
   params: Promise<{ id: string }>;
@@ -51,13 +55,13 @@ export default async function EditSeriesPage(props: {
   async function handleSeriesFormAction(formData: FormData) {
     "use server";
     formData.append("id", params.id);
-    await updateSeries(formData);
+    return await updateSeriesAction(formData);
   }
 
   async function handleSkuCreateAction(formData: FormData) {
     "use server";
     formData.append("seriesId", params.id);
-    await createSku(formData);
+    return await createSkuAction(formData);
   }
 
   function createSkuUpdateAction(skuId: number) {
@@ -65,7 +69,8 @@ export default async function EditSeriesPage(props: {
       "use server";
       formData.append("seriesId", params.id);
       formData.append("id", skuId.toString());
-      await updateSku(formData);
+
+      return await updateSkuAction(formData);
     };
   }
 

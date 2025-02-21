@@ -9,19 +9,13 @@ export default async function NewSeriesPage() {
     redirect("/admin/login");
   }
 
-  async function handleSeriesFormAction(formData: FormData) {
-    "use server";
-
-    await createSeriesAction(formData);
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">New Series</h1>
       </div>
 
-      <SeriesForm action={handleSeriesFormAction} />
+      <SeriesForm action={createSeriesAction} />
     </div>
   );
 }

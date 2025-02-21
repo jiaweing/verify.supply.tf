@@ -21,52 +21,69 @@ export async function isNonceUsed(
   nonce: string,
   req?: NextRequest
 ): Promise<boolean> {
-  // Check rate limit first
-  const rateLimitResult = await nonceRateLimiter.check(
-    req || ({} as NextRequest),
-    100,
-    nonce
-  );
+  try {
+    // Check rate limit first
+    const rateLimitResult = await nonceRateLimiter.check(
+      req || ({} as NextRequest),
+      100,
+      nonce
+    );
 
-  if (!rateLimitResult.success) {
-    throw new Error("Rate limit exceeded for nonce validation");
+    if (!rateLimitResult.success) {
+      return true; // Treat rate limit exceeded as nonce being used
+    }
+
+    const transaction = await db.query.transactions.findFirst({
+      where: and(
+        eq(transactions.transactionNonce, nonce),
+        gte(
+          transactions.timestamp,
+          new Date(Date.now() - MAX_NONCE_AGE_HOURS * 60 * 60 * 1000)
+        )
+      ),
+    });
+
+    return !!transaction;
+  } catch (error) {
+    console.error("Error checking nonce:", error);
+    return true; // Treat errors as nonce being used for safety
   }
-
-  const transaction = await db.query.transactions.findFirst({
-    where: and(
-      eq(transactions.transactionNonce, nonce),
-      gte(
-        transactions.timestamp,
-        new Date(Date.now() - MAX_NONCE_AGE_HOURS * 60 * 60 * 1000)
-      )
-    ),
-  });
-
-  return !!transaction;
 }
 
 /**
  * Cleans up old nonces from the database to prevent bloat
- * @returns The number of nonces cleaned up
+ * @returns The number of nonces cleaned up or error response
  */
-export async function cleanupOldNonces(): Promise<number> {
-  // First fetch old transactions to be deleted
-  const oldTransactions = await db.query.transactions.findMany({
-    where: lt(
-      transactions.timestamp,
-      new Date(Date.now() - MAX_NONCE_AGE_HOURS * 60 * 60 * 1000)
-    ),
-    limit: 1000,
-  });
+export async function cleanupOldNonces(): Promise<{
+  success: boolean;
+  error?: string;
+  data?: number;
+}> {
+  try {
+    // First fetch old transactions to be deleted
+    const oldTransactions = await db.query.transactions.findMany({
+      where: lt(
+        transactions.timestamp,
+        new Date(Date.now() - MAX_NONCE_AGE_HOURS * 60 * 60 * 1000)
+      ),
+      limit: 1000,
+    });
 
-  if (oldTransactions.length === 0) {
-    return 0;
+    if (oldTransactions.length === 0) {
+      return { success: true, data: 0 };
+    }
+
+    // Then delete them in a batch
+    await db
+      .delete(transactions)
+      .where(or(...oldTransactions.map((t) => eq(transactions.id, t.id))));
+
+    return { success: true, data: oldTransactions.length };
+  } catch (error) {
+    console.error("Error cleaning up nonces:", error);
+    return {
+      success: false,
+      error: "Failed to clean up old nonces",
+    };
   }
-
-  // Then delete them in a batch
-  await db
-    .delete(transactions)
-    .where(or(...oldTransactions.map((t) => eq(transactions.id, t.id))));
-
-  return oldTransactions.length;
 }

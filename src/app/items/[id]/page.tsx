@@ -118,10 +118,13 @@ export default async function ItemVerificationPage(props: {
   const showHistory = true;
 
   const currentOwner = getCurrentOwner(item.transactions, item);
-  const visibilityMap = await fetchVisibilityPreferences([
+  const visibilityPreferences = await fetchVisibilityPreferences([
     item.originalOwnerEmail,
     currentOwner.currentOwnerEmail,
   ]);
+  const visibilityMap = visibilityPreferences.success
+    ? visibilityPreferences.data
+    : undefined;
 
   return (
     <div className="container max-w-4xl py-10 mx-auto space-y-6">

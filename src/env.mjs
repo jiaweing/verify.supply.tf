@@ -47,6 +47,18 @@ export const env = createEnv({
       .pipe(z.number().int().positive())
       .default("5"),
 
+    // Transfer timing settings
+    TRANSFER_COOLDOWN_SECONDS: z
+      .string()
+      .transform((val) => parseInt(val, 10))
+      .pipe(z.number().int().positive())
+      .default("86400"), // 24 hours
+    TRANSFER_SAFETY_MARGIN_SECONDS: z
+      .string()
+      .transform((val) => parseInt(val, 10))
+      .pipe(z.number().int().positive())
+      .default("300"), // 5 minutes
+
     // Cloudflare Turnstile
     TURNSTILE_SECRET_KEY: z.string().min(1),
 
@@ -88,6 +100,8 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    TRANSFER_COOLDOWN_SECONDS: process.env.TRANSFER_COOLDOWN_SECONDS,
+    TRANSFER_SAFETY_MARGIN_SECONDS: process.env.TRANSFER_SAFETY_MARGIN_SECONDS,
   },
 
   skipValidation: process.env.CI === "true",

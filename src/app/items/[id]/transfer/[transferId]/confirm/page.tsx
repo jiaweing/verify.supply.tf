@@ -13,7 +13,6 @@ import { items, ownershipTransfers } from "@/db/schema";
 import { formatMintNumber } from "@/lib/item";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { confirmTransfer, rejectTransfer } from "./actions";
 
 export default async function TransferConfirmPage({
   params,
@@ -80,16 +79,6 @@ export default async function TransferConfirmPage({
     );
   }
 
-  const handleConfirmTransfer = async (formData: FormData) => {
-    "use server";
-    await confirmTransfer(id, transferId, formData);
-  };
-
-  const handleRejectTransfer = async (formData: FormData) => {
-    "use server";
-    await rejectTransfer(id, transferId, formData);
-  };
-
   return (
     <div className="container py-10 mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] space-y-4">
       <Header />
@@ -130,10 +119,7 @@ export default async function TransferConfirmPage({
               </div>
             </div>
           </div>
-          <TransferConfirmButtons
-            onConfirm={handleConfirmTransfer}
-            onReject={handleRejectTransfer}
-          />
+          <TransferConfirmButtons id={id} transferId={transferId} />
         </CardContent>
       </Card>
       <Footer />

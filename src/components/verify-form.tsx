@@ -133,12 +133,16 @@ export function VerifyForm({
         formData.append("turnstileToken", turnstileToken);
 
         const response = await requestVerificationCode(formData);
+        if (!response.success) {
+          toast.error(response.error);
+          return;
+        }
 
         // Store the verified data and item ID
         setVerifiedData({
           email: values.email,
           serialNumber: values.serialNumber,
-          itemId: response.itemId,
+          itemId: response.data?.itemId,
         });
 
         toast.success("Check your email for the verification code");
@@ -155,17 +159,27 @@ export function VerifyForm({
         formData.append("code", values.code);
         formData.append("productId", verifiedData.itemId!);
 
-        await verifyCode(formData);
+        const verifyResponse = await verifyCode(formData);
+        if (!verifyResponse.success) {
+          toast.error(verifyResponse.error);
+          return;
+        }
+
+        const effectiveItemId = itemId || verifiedData.itemId;
+        if (!effectiveItemId) {
+          toast.error("Item ID not found");
+          return;
+        }
+
         if (onSuccess) {
-          onSuccess({ itemId: itemId!, sessionToken: "verified" });
+          onSuccess({ itemId: effectiveItemId, sessionToken: "verified" });
         } else {
-          router.push(`/items/${itemId}`);
+          router.push(`/items/${effectiveItemId}`);
         }
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Verification failed"
-      );
+      console.error("Verification error:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -183,7 +197,11 @@ export function VerifyForm({
       if (itemId) formData.append("itemId", itemId);
       formData.append("turnstileToken", turnstileToken);
 
-      await requestVerificationCode(formData);
+      const response = await requestVerificationCode(formData);
+      if (!response.success) {
+        toast.error(response.error);
+        return;
+      }
 
       toast.success("New verification code sent to your email");
       setCanResend(false);
@@ -200,9 +218,8 @@ export function VerifyForm({
         });
       }, 1000);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to resend code"
-      );
+      console.error("Error resending code:", error);
+      toast.error("Failed to resend code. Please try again.");
     } finally {
       setIsResending(false);
     }
@@ -341,7 +358,7 @@ export function VerifyForm({
                 {isResending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Resending...
+                    Resending... ...
                   </>
                 ) : canResend ? (
                   <div className="flex flex-row gap-2">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
 export function AdminLogoutButton() {
   const router = useRouter();
@@ -13,8 +14,13 @@ export function AdminLogoutButton() {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      await adminLogoutAction();
-      router.push("/");
+      const result = await adminLogoutAction();
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Logged out successfully");
+      router.push("/admin/login");
       router.refresh();
     } catch (error) {
       console.error("Failed to logout:", error);

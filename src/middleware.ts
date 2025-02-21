@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
 
   // Apply rate limiting for authentication endpoints
   if (request.nextUrl.pathname.startsWith("/admin/login")) {
-    const rateLimitResult = await authRateLimiter.check(request, 5); // 5 attempts per 15 minutes
+    const rateLimitResult = await authRateLimiter.check(request, 20);
     if (!rateLimitResult.success) {
       return new NextResponse("Too Many Requests", {
         status: 429,
@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
 
   // Apply rate limiting for API endpoints
   if (request.nextUrl.pathname.startsWith("/api/")) {
-    const rateLimitResult = await apiRateLimiter.check(request, 60); // 60 requests per minute
+    const rateLimitResult = await apiRateLimiter.check(request, 100);
     if (!rateLimitResult.success) {
       return new NextResponse("Too Many Requests", {
         status: 429,

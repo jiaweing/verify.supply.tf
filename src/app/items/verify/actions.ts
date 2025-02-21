@@ -13,7 +13,16 @@ import { env } from "process";
 export async function verifyNfcLink(searchParams: {
   key: string;
   version: string;
-}) {
+}): Promise<{
+  success: boolean;
+  error?: string;
+  data?: {
+    email: string;
+    productId: string;
+    serialNumber: string;
+    purchaseDate: Date;
+  };
+}> {
   const { key, version } = searchParams;
 
   try {
@@ -29,16 +38,18 @@ export async function verifyNfcLink(searchParams: {
       });
 
       if (!recentKey) {
-        throw new Error("No active encryption keys");
+        return { success: false, error: "No active encryption keys" };
       }
 
-      throw new Error("Please use the most recent NFC link");
+      return { success: false, error: "Please use the most recent NFC link" };
     }
 
     if (globalKey.activeTo < new Date()) {
-      throw new Error(
-        "Expired key version. Please scan the item again to get a new link."
-      );
+      return {
+        success: false,
+        error:
+          "Expired key version. Please scan the item again to get a new link.",
+      };
     }
 
     // Decrypt the encryption key
@@ -46,7 +57,10 @@ export async function verifyNfcLink(searchParams: {
     const masterKey = Buffer.from(masterKeyHex, "hex");
 
     if (masterKey.length !== 32) {
-      throw new Error("MASTER_KEY must be a 32-byte hex string");
+      return {
+        success: false,
+        error: "MASTER_KEY must be a 32-byte hex string",
+      };
     }
 
     // First decrypt the item key
@@ -68,19 +82,23 @@ export async function verifyNfcLink(searchParams: {
     })) as Buffer;
 
     // Then verify the NFC link which is already in the correct base64url format
-    const verifiedData = await EncryptionService.verifyNfcLink(
+    const verifiedResult = await EncryptionService.verifyNfcLink(
       key,
       version,
       itemKey
     );
 
+    if (!verifiedResult.success) {
+      return { success: false, error: "Invalid verification key" };
+    }
+
     // Get item details and verify all fields match
     const item = await db.query.items.findFirst({
       where: (items, { and, eq }) =>
         and(
-          eq(items.id, verifiedData.itemId),
-          eq(items.serialNumber, verifiedData.serialNumber),
-          eq(items.nfcSerialNumber, verifiedData.nfcSerialNumber)
+          eq(items.id, verifiedResult.data!.itemId),
+          eq(items.serialNumber, verifiedResult.data!.serialNumber),
+          eq(items.nfcSerialNumber, verifiedResult.data!.nfcSerialNumber)
         ),
       with: {
         latestTransaction: true,
@@ -93,21 +111,21 @@ export async function verifyNfcLink(searchParams: {
     });
 
     if (!item) {
-      throw new Error("Item not found");
+      return { success: false, error: "Item not found" };
     }
-
-    // Get current owner info including latest transfer date
     const currentOwner = getCurrentOwner(item.transactions, item);
-
     return {
-      productId: item.id.toString(),
-      email: currentOwner.currentOwnerEmail,
-      serialNumber: item.serialNumber,
-      purchaseDate: currentOwner.lastTransferDate,
+      success: true,
+      data: {
+        productId: item.id.toString(),
+        email: currentOwner.currentOwnerEmail,
+        serialNumber: item.serialNumber,
+        purchaseDate: currentOwner.lastTransferDate,
+      },
     };
   } catch (err) {
     console.error("Error verifying NFC link:", err);
-    throw new Error("Invalid verification key");
+    return { success: false, error: "Invalid verification key" };
   }
 }
 
@@ -116,11 +134,11 @@ export async function requestVerificationCode(formData: FormData) {
   const serialNumber = formData.get("serialNumber")?.toString();
 
   if (!email) {
-    throw new Error("Email is required");
+    return { success: false, error: "Email is required" };
   }
 
   if (!serialNumber) {
-    throw new Error("Serial number is required");
+    return { success: false, error: "Serial number is required" };
   }
 
   const item = await db.query.items.findFirst({
@@ -136,7 +154,7 @@ export async function requestVerificationCode(formData: FormData) {
   });
 
   if (!item) {
-    throw new Error("Item not found");
+    return { success: false, error: "Item not found" };
   }
 
   // Get current owner info
@@ -144,7 +162,7 @@ export async function requestVerificationCode(formData: FormData) {
 
   // Only allow verification by current owner
   if (currentOwner.currentOwnerEmail.toLowerCase() !== email.toLowerCase()) {
-    throw new Error("Email does not match current owner");
+    return { success: false, error: "Email does not match current owner" };
   }
 
   // Generate and store auth code
@@ -167,7 +185,9 @@ export async function requestVerificationCode(formData: FormData) {
 
   return {
     success: true,
-    itemId: item.id,
+    data: {
+      itemId: item.id,
+    },
   };
 }
 
@@ -177,11 +197,11 @@ export async function verifyCode(formData: FormData) {
   const productId = formData.get("productId")?.toString();
 
   if (!code || !email) {
-    throw new Error("Code and email are required");
+    return { success: false, error: "Code and email are required" };
   }
 
   if (!productId) {
-    throw new Error("Item ID is required");
+    return { success: false, error: "Item ID is required" };
   }
 
   // Atomically update and return the auth code
@@ -198,17 +218,20 @@ export async function verifyCode(formData: FormData) {
     .returning();
 
   if (!authCode) {
-    throw new Error("Invalid code");
+    return { success: false, error: "Invalid code" };
   }
 
   if (authCode.expiresAt < new Date()) {
-    throw new Error("Code has expired");
+    return { success: false, error: "Code has expired" };
   }
 
   // Use the robust blockchain verification that checks the entire chain
   const { isValid, error } = await verifyItemChain(db, productId);
   if (!isValid) {
-    throw new Error(`Blockchain verification failed: ${error}`);
+    return {
+      success: false,
+      error: `Blockchain verification failed: ${error}`,
+    };
   }
 
   // Create session
