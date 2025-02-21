@@ -1,6 +1,8 @@
 import { ItemsTable } from "@/components/items-table";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
+import { shortUrls } from "@/db/schema";
+import { env } from "@/env.mjs";
 import { auth } from "@/lib/auth";
 import { formatMintNumber } from "@/lib/item";
 import { sql } from "drizzle-orm";
@@ -26,9 +28,48 @@ export default async function AdminPage(props: PageProps) {
 
   const { search } = await Promise.resolve(searchParams);
 
-  // Fetch items with search filter and pagination
+  // Fetch items including their short URLs
   const itemList = await db.query.items.findMany({
     orderBy: (items, { desc }) => [desc(items.createdAt)],
+    with: {
+      shortUrls: true,
+    },
+    where: search
+      ? (items, { or, like }) =>
+          or(
+            like(
+              sql`LOWER(${items.serialNumber})`,
+              `%${search.toLowerCase()}%`
+            ),
+            like(sql`LOWER(${items.sku})`, `%${search.toLowerCase()}%`),
+            like(
+              sql`LOWER(${items.originalOwnerName})`,
+              `%${search.toLowerCase()}%`
+            )
+          )
+      : undefined,
+  });
+
+  // Create short URLs for items that don't have them
+  for (const item of itemList) {
+    if (!item.shortUrls?.length) {
+      try {
+        await db.insert(shortUrls).values({
+          originalUrl: item.nfcLink,
+          itemId: item.id,
+        });
+      } catch (error) {
+        console.error("Error creating short URL for item:", item.id, error);
+      }
+    }
+  }
+
+  // Refetch items to get newly created short URLs
+  const updatedItemList = await db.query.items.findMany({
+    orderBy: (items, { desc }) => [desc(items.createdAt)],
+    with: {
+      shortUrls: true,
+    },
     where: search
       ? (items, { or, like }) =>
           or(
@@ -58,9 +99,12 @@ export default async function AdminPage(props: PageProps) {
 
       <ItemsTable
         items={await Promise.all(
-          itemList.map(async (item) => ({
+          updatedItemList.map(async (item) => ({
             ...item,
             mintNumber: await formatMintNumber(item.id),
+            shortUrl: item.shortUrls?.[0]
+              ? `${env.NEXT_PUBLIC_APP_URL}/s/${item.shortUrls[0].shortPath}`
+              : undefined,
           }))
         )}
       />

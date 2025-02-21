@@ -1,8 +1,10 @@
 import { BlockchainCard } from "@/components/blockchain-card";
+import { NfcDataCard } from "@/components/nfc-data-card";
 import { OwnershipTable } from "@/components/ownership-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
+import { shortUrls } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { verifyItemChain } from "@/lib/blockchain";
 import { formatDate, formatDateTime } from "@/lib/date";
@@ -30,7 +32,7 @@ export default async function ItemPage(props: {
     notFound();
   }
 
-  const item = await db.query.items.findFirst({
+  const itemResult = await db.query.items.findFirst({
     where: (items, { eq }) => eq(items.id, id),
     with: {
       transactions: {
@@ -47,11 +49,52 @@ export default async function ItemPage(props: {
           block: true,
         },
       },
+      shortUrls: true,
     },
   });
 
-  if (!item) {
+  if (!itemResult) {
     notFound();
+  }
+
+  let item = itemResult;
+
+  // Create short URL if it doesn't exist
+  if (!item.shortUrls?.length) {
+    try {
+      await db.insert(shortUrls).values({
+        originalUrl: item.nfcLink,
+        itemId: item.id,
+      });
+
+      // Refetch item to get the new short URL
+      const updatedItem = await db.query.items.findFirst({
+        where: (items, { eq }) => eq(items.id, id),
+        with: {
+          transactions: {
+            with: {
+              block: true,
+            },
+          },
+          ownershipHistory: {
+            orderBy: (history, { desc }) => [desc(history.createdAt)],
+          },
+          creationBlock: true,
+          latestTransaction: {
+            with: {
+              block: true,
+            },
+          },
+          shortUrls: true,
+        },
+      });
+
+      if (updatedItem) {
+        item = updatedItem;
+      }
+    } catch (error) {
+      console.error("Error creating short URL:", error);
+    }
   }
 
   return (
@@ -154,34 +197,12 @@ export default async function ItemPage(props: {
           centered={false}
         />
 
-        {/* NFC Data */}
-        <Card>
-          <CardHeader>
-            <CardTitle>NFC Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 gap-4">
-              <div>
-                <dt className="font-medium">Link</dt>
-                <dd className="text-muted-foreground font-mono text-sm break-all mt-1">
-                  {item.nfcLink}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium">Blockchain Version</dt>
-                <dd className="text-muted-foreground font-mono text-sm break-all mt-1">
-                  {item.blockchainVersion}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium">Global Key Version</dt>
-                <dd className="text-muted-foreground font-mono text-sm mt-1">
-                  {item.globalKeyVersion}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+        <NfcDataCard
+          nfcLink={item.nfcLink}
+          shortPath={item.shortUrls?.[0]?.shortPath}
+          blockchainVersion={item.blockchainVersion}
+          globalKeyVersion={item.globalKeyVersion}
+        />
 
         {/* Ownership History */}
         <Card>

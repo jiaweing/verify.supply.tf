@@ -6,6 +6,7 @@ import {
   globalEncryptionKeys,
   items,
   series,
+  shortUrls,
   transactions,
 } from "@/db/schema";
 import { env } from "@/env.mjs";
@@ -273,6 +274,17 @@ export async function createItemAction(formData: FormData) {
         nfcLink,
         createdAt: timestamp, // Use normalized timestamp
       });
+
+      // Create short URL
+      await tx.insert(shortUrls).values({
+        originalUrl: nfcLink,
+        itemId,
+      });
+    });
+
+    // Get the generated short URL
+    const shortUrl = await db.query.shortUrls.findFirst({
+      where: eq(shortUrls.itemId, itemId),
     });
 
     return {
@@ -281,6 +293,9 @@ export async function createItemAction(formData: FormData) {
       data: {
         itemId,
         nfcLink,
+        shortUrl: shortUrl
+          ? `${env.NEXT_PUBLIC_APP_URL}/${shortUrl.shortPath}`
+          : undefined,
       },
     };
   } catch (error) {
