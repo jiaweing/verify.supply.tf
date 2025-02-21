@@ -11,8 +11,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import * as React from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const formSchema = z.object({
@@ -23,6 +26,17 @@ const formSchema = z.object({
 
 type FormSchema = z.infer<typeof formSchema>;
 
+interface ActionResponse {
+  success: boolean;
+  error?: string;
+  data?: {
+    id: number;
+    name: string;
+    seriesNumber: string;
+    totalPieces: number;
+  };
+}
+
 interface SeriesFormProps {
   initialData?: {
     id: number;
@@ -30,12 +44,13 @@ interface SeriesFormProps {
     seriesNumber: string;
     totalPieces: number;
   };
-  action?: (formData: FormData) => void;
+  action?: (formData: FormData) => Promise<ActionResponse>;
   onSubmit?: (values: FormSchema) => void;
 }
 
 export function SeriesForm({ initialData, action, onSubmit }: SeriesFormProps) {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
@@ -46,20 +61,28 @@ export function SeriesForm({ initialData, action, onSubmit }: SeriesFormProps) {
   });
 
   const handleSubmit = async (values: FormSchema) => {
+    setIsSubmitting(true);
     try {
       if (action) {
         const formData = new FormData();
         Object.entries(values).forEach(([key, value]) => {
           formData.append(key, value.toString());
         });
-        await Promise.resolve(action(formData));
+        const response = await action(formData);
+        if (!response.success) {
+          toast.error(response.error || "Failed to save series");
+          return;
+        }
+        toast.success(initialData ? "Series updated" : "Series created");
+        return initialData ? router.refresh() : router.push("/admin/series");
       } else if (onSubmit) {
         await Promise.resolve(onSubmit(values));
       }
-      router.push("/admin/series");
-      router.refresh();
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -118,7 +141,18 @@ export function SeriesForm({ initialData, action, onSubmit }: SeriesFormProps) {
         />
 
         <div className="flex gap-4">
-          <Button type="submit">{initialData ? "Update" : "Create"}</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {initialData ? "Updating..." : "Creating..."}
+              </>
+            ) : initialData ? (
+              "Update"
+            ) : (
+              "Create"
+            )}
+          </Button>
           <Button
             type="button"
             variant="outline"

@@ -1,6 +1,6 @@
 import * as schema from "@/db/schema";
 import { createHash } from "crypto";
-import { asc, eq, inArray, type InferModel } from "drizzle-orm";
+import { asc, desc, eq, inArray, type InferModel } from "drizzle-orm";
 import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export type DbBlock = InferModel<typeof schema.blocks>;
@@ -43,6 +43,15 @@ export function hash(data: unknown): string {
   return createHash("sha256").update(stableStringify(data)).digest("hex");
 }
 
+// Generate 32 bytes of random data using WebCrypto API
+function generateRandomBytes(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // Block chain data types
 export interface BlockData {
   blockNumber: number;
@@ -56,7 +65,7 @@ export interface TransactionData {
   type: "create" | "transfer";
   itemId: string;
   timestamp: string;
-  nonce: string; // 64 character hex string from crypto.randomBytes(32) for replay protection
+  nonce: string; // 64 character hex string from generateRandomBytes() for replay protection
   data: {
     from?: {
       name: string;
@@ -384,6 +393,120 @@ async function getAllBlocksAndTransactions(
     transactions: transactionsByBlock,
     itemTransactions,
   };
+}
+
+export async function createTransactionBlock(
+  db: Database,
+  data: {
+    type: "create" | "transfer";
+    itemId: string;
+    from?: { name: string; email: string };
+    to: { name: string; email: string };
+  }
+) {
+  try {
+    // Get last block for chain linking
+    const lastBlock = await db.query.blocks.findFirst({
+      orderBy: [desc(schema.blocks.blockNumber)],
+    });
+
+    // Get item details
+    const item = await db.query.items.findFirst({
+      where: eq(schema.items.id, data.itemId),
+    });
+
+    if (!item) {
+      return { success: false, error: "Item not found" };
+    }
+
+    const nextBlockNumber = (lastBlock?.blockNumber ?? 0) + 1;
+    const timestampISO = new Date().toISOString().replace(/\.\d+Z$/, ".000Z");
+    const timestamp = new Date(timestampISO);
+
+    const transactionData: TransactionData = {
+      type: data.type,
+      itemId: data.itemId,
+      timestamp: timestampISO,
+      nonce: generateRandomBytes(),
+      data: {
+        from: data.from,
+        to: data.to,
+        item: {
+          id: item.id,
+          serialNumber: item.serialNumber,
+          sku: item.sku,
+          mintNumber: item.mintNumber,
+          weight: item.weight,
+          nfcSerialNumber: item.nfcSerialNumber,
+          orderId: item.orderId,
+          originalOwnerName: item.originalOwnerName,
+          originalOwnerEmail: item.originalOwnerEmail,
+          originalPurchaseDate: item.originalPurchaseDate,
+          purchasedFrom: item.purchasedFrom,
+          manufactureDate: item.manufactureDate,
+          producedAt: item.producedAt,
+          createdAt: item.createdAt,
+          blockchainVersion: item.blockchainVersion,
+          globalKeyVersion: item.globalKeyVersion,
+          nfcLink: item.nfcLink,
+        },
+      },
+    };
+
+    const block = new Block(
+      nextBlockNumber,
+      lastBlock?.hash ?? "0".repeat(64),
+      [transactionData],
+      timestampISO
+    );
+
+    const blockHash = block.calculateHash();
+    const merkleRoot = block.getMerkleTree().getRoot();
+
+    let newBlock: typeof schema.blocks.$inferSelect;
+    let newTransaction: typeof schema.transactions.$inferSelect;
+
+    await db.transaction(async (tx) => {
+      [newBlock] = await tx
+        .insert(schema.blocks)
+        .values({
+          blockNumber: nextBlockNumber,
+          timestamp,
+          previousHash: lastBlock?.hash ?? "0".repeat(64),
+          merkleRoot,
+          blockNonce: 0,
+          hash: blockHash,
+        })
+        .returning();
+
+      [newTransaction] = await tx
+        .insert(schema.transactions)
+        .values({
+          blockId: newBlock.id,
+          transactionType: data.type,
+          itemId: data.itemId,
+          data: transactionData,
+          timestamp,
+          hash: hash(transactionData),
+          transactionNonce: transactionData.nonce,
+        })
+        .returning();
+
+      await tx
+        .update(schema.items)
+        .set({ latestTransactionId: newTransaction.id })
+        .where(eq(schema.items.id, data.itemId));
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating transaction block:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to create transaction",
+    };
+  }
 }
 
 export async function verifyItemChain(

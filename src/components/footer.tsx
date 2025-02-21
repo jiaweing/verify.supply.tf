@@ -13,7 +13,7 @@ export default function Footer() {
           rel="noopener noreferrer"
           className="text-primary flex flex-row gap-1"
         >
-          <Github className="h-4 w-4" /> <div>open-source</div>
+          <Github className="h-4 w-4" /> <span>open-source</span>
         </Link>
       </p>
     </div>

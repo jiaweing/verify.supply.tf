@@ -38,7 +38,13 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
       formData.append("newOwnerName", newOwnerName);
       formData.append("newOwnerEmail", newOwnerEmail);
 
-      await transferItem(formData);
+      const response = await transferItem(formData);
+      if (!response.success) {
+        toast.error(
+          "error" in response ? response.error : "Failed to transfer item"
+        );
+        return;
+      }
 
       setIsOpen(false);
       toast.success("Transfer invitation sent.", {
@@ -48,9 +54,7 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
       router.refresh();
     } catch (error) {
       console.error("Failed to transfer item:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to transfer item"
-      );
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -102,12 +106,12 @@ export function TransferItemButton({ itemId }: TransferItemButtonProps) {
               "Transfer"
             )}
           </Button>
-          <p className="text-muted-foreground mt-2 justify-center text-xs items-center flex flex-row gap-2">
+          <div className="text-muted-foreground mt-2 justify-center text-xs items-center flex flex-row gap-2">
             <AlertCircle className="w-4 h-4 text-destructive" />{" "}
             <div>
               This is irreversible! Please double check before transferring.
             </div>
-          </p>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -4,6 +4,7 @@ import { logoutAction } from "@/app/(auth)/admin/actions";
 import { DoorOpen, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 import { Button } from "./ui/button";
 
 export function EndSessionButton() {
@@ -13,7 +14,11 @@ export function EndSessionButton() {
   const handleEndSession = async () => {
     setIsLoading(true);
     try {
-      await logoutAction();
+      const result = await logoutAction();
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
       router.push("/");
       router.refresh();
     } catch (error) {

@@ -21,7 +21,7 @@ export class EncryptionService {
         this.KEY_LENGTH,
         "sha256",
         (err, derivedKey) => {
-          if (err) reject(err);
+          if (err) reject(new Error("Key derivation failed"));
           else resolve(derivedKey);
         }
       );
@@ -40,6 +40,10 @@ export class EncryptionService {
     iv: Buffer;
     authTag: Buffer;
   }> {
+    if (key.length !== this.KEY_LENGTH) {
+      throw new Error("Invalid key length");
+    }
+
     const iv = this.generateIV();
     const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv, {
       authTagLength: this.AUTH_TAG_LENGTH,
@@ -62,8 +66,20 @@ export class EncryptionService {
     key: Buffer;
     iv: Buffer;
     authTag: Buffer;
-    raw?: boolean; // Add flag to indicate if we want raw buffer output
+    raw?: boolean;
   }): Promise<string | Buffer> {
+    if (data.key.length !== this.KEY_LENGTH) {
+      throw new Error("Invalid key length");
+    }
+
+    if (data.iv.length !== this.IV_LENGTH) {
+      throw new Error("Invalid IV length");
+    }
+
+    if (data.authTag.length !== this.AUTH_TAG_LENGTH) {
+      throw new Error("Invalid auth tag length");
+    }
+
     try {
       const decipher = crypto.createDecipheriv(
         this.ALGORITHM,
@@ -81,14 +97,14 @@ export class EncryptionService {
       ]);
 
       return data.raw ? decrypted : decrypted.toString("utf8");
-    } catch (error) {
+    } catch {
       console.error("Decryption debug:", {
         encryptedLength: data.encrypted.length,
         keyLength: data.key.length,
         ivLength: data.iv.length,
         authTagLength: data.authTag.length,
       });
-      throw error;
+      throw new Error("Decryption failed");
     }
   }
 
@@ -117,31 +133,47 @@ export class EncryptionService {
     version: string,
     itemKey: Buffer
   ): Promise<{
-    itemId: string;
-    serialNumber: string;
-    nfcSerialNumber: string;
+    success: boolean;
+    error?: string;
+    data?: {
+      itemId: string;
+      serialNumber: string;
+      nfcSerialNumber: string;
+    };
   }> {
-    const buffer = Buffer.from(key, "base64url");
+    try {
+      const buffer = Buffer.from(key, "base64url");
 
-    // Extract components from buffer
-    const authTag = buffer.subarray(buffer.length - this.AUTH_TAG_LENGTH);
-    const iv = buffer.subarray(
-      buffer.length - this.AUTH_TAG_LENGTH - this.IV_LENGTH,
-      buffer.length - this.AUTH_TAG_LENGTH
-    );
-    const encrypted = buffer.subarray(
-      0,
-      buffer.length - this.AUTH_TAG_LENGTH - this.IV_LENGTH
-    );
+      // Extract components from buffer
+      const authTag = buffer.subarray(buffer.length - this.AUTH_TAG_LENGTH);
+      const iv = buffer.subarray(
+        buffer.length - this.AUTH_TAG_LENGTH - this.IV_LENGTH,
+        buffer.length - this.AUTH_TAG_LENGTH
+      );
+      const encrypted = buffer.subarray(
+        0,
+        buffer.length - this.AUTH_TAG_LENGTH - this.IV_LENGTH
+      );
 
-    const decrypted = await this.decrypt({
-      encrypted,
-      key: itemKey,
-      iv,
-      authTag,
-    });
+      const decrypted = await this.decrypt({
+        encrypted,
+        key: itemKey,
+        iv,
+        authTag,
+      });
 
-    return JSON.parse(decrypted as string);
+      const data = JSON.parse(decrypted as string);
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      console.error("Error verifying NFC link:", error);
+      return {
+        success: false,
+        error: "Invalid or tampered NFC link",
+      };
+    }
   }
 
   static generateAuthCode(): string {

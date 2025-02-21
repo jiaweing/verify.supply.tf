@@ -34,7 +34,16 @@ export function LinkVerifier({ onShowForm }: LinkVerifierProps) {
         formData.append("version", version);
 
         // call verifyNfcLink function
-        const item = await verifyNfcLink({ key, version });
+        const result = await verifyNfcLink({ key, version });
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        if (!result.data) {
+          toast.error("Item data not found");
+          return;
+        }
+        const item = result.data;
 
         // If we have a valid session and matching item ID, redirect to item page
         if (session && session.itemId === item.productId) {

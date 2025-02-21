@@ -25,7 +25,10 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { getAllSeries, getSeriesSkus } from "../../series/[id]/actions";
+import {
+  getSeriesAction as getAllSeries,
+  getSeriesSkusAction as getSeriesSkus,
+} from "../../series/actions";
 
 interface Series {
   id: number;
@@ -80,6 +83,7 @@ export function CreateItemForm() {
 
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [skus, setSkus] = useState<Sku[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Watch selected series for info display
   const selectedSeries = form.watch("seriesId");
@@ -88,32 +92,42 @@ export function CreateItemForm() {
 
   // Load series list on mount
   useEffect(() => {
-    getAllSeries()
-      .then(setSeriesList)
-      .catch((error) => {
-        console.error("Error fetching series list:", error);
-      });
+    async function loadSeries() {
+      const response = await getAllSeries();
+      if (!response.success) {
+        toast.error(response.error);
+        return;
+      }
+      setSeriesList(response.data || []);
+    }
+    loadSeries();
   }, []);
 
   // Load SKUs when series is selected
   useEffect(() => {
-    if (selectedSeries) {
-      getSeriesSkus(selectedSeries.toString())
-        .then(setSkus)
-        .catch((error) => {
-          console.error("Error fetching SKUs:", error);
-        });
-    } else {
-      setSkus([]);
+    async function loadSkus() {
+      if (selectedSeries) {
+        const response = await getSeriesSkus(selectedSeries);
+        if (!response.success) {
+          toast.error(response.error);
+          return;
+        }
+        setSkus(response.data || []);
+      } else {
+        setSkus([]);
+      }
     }
+    loadSkus();
   }, [selectedSeries]);
 
   async function onSubmit(data: ItemFormValues) {
+    setIsSubmitting(true);
     try {
       const formData = new FormData();
 
       if (!data.purchaseDate || !data.manufactureDate) {
-        throw new Error("Date fields are required");
+        toast.error("Date fields are required");
+        return;
       }
 
       // Add all non-date fields
@@ -148,22 +162,20 @@ export function CreateItemForm() {
         ).toISOString()
       );
 
-      // Debug log
-      console.log("Form data before submission:");
-      formData.forEach((value, key) => {
-        console.log(`${key}: ${value}`);
-      });
+      const response = await createItemAction(formData);
+      if (!response.success) {
+        toast.error(response.error);
+        return;
+      }
 
-      await createItemAction(formData);
+      toast.success("Item created successfully");
       router.push("/admin");
       router.refresh();
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Something went wrong";
-      form.setError("root", {
-        message: errorMessage,
-      });
-      toast.error(`[ Server ] Error: ${errorMessage}`);
+      console.error("Error creating item:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -419,8 +431,8 @@ export function CreateItemForm() {
           </div>
         )}
 
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? (
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Creating...

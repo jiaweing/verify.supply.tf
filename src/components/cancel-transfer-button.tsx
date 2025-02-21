@@ -27,7 +27,11 @@ export function CancelTransferButton({
       formData.append("itemId", itemId);
       formData.append("transferId", transferId);
 
-      await cancelTransfer(formData);
+      const result = await cancelTransfer(formData);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Transfer invitation has been cancelled.");
       router.refresh();
     } catch (error) {

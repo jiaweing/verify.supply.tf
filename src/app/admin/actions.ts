@@ -3,7 +3,6 @@
 import { env } from "@/env.mjs";
 import { adminLogin } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -44,19 +43,17 @@ export async function adminLoginAction(formData: FormData) {
     // Validate input
     const parsed = loginSchema.safeParse(data);
     if (!parsed.success) {
-      throw new Error("Invalid email or password");
+      return { success: false, error: "Invalid email or password" };
     }
 
     // Attempt login
     const token = await adminLogin(parsed.data.email, parsed.data.password);
     if (!token) {
-      throw new Error("Invalid email or password");
+      return { success: false, error: "Invalid email or password" };
     }
 
     // Set cookie
     const cookieStore = await cookies();
-    // Note: Cookie signing is handled by the JWT token itself
-    // Domain restriction is handled by SameSite policy
     cookieStore.set("admin_token", token, {
       httpOnly: true, // Prevent JavaScript access
       secure: env.NODE_ENV === "production", // Require HTTPS in production
@@ -65,63 +62,29 @@ export async function adminLoginAction(formData: FormData) {
       maxAge: 60 * 60 * 4, // 4 hours
     });
 
-    redirect("/admin");
+    return { success: true };
   } catch (error) {
     console.error("Error in admin login:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred during login. Please try again.",
+    };
   }
 }
 
-export async function adminLogoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete("admin_token");
-  redirect("/admin/login");
-}
-
-import { db } from "@/db";
-import { series } from "@/db/schema";
-
-const seriesSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  skuPrefix: z.string().min(3).max(5),
-  mintLimit: z.number().min(1),
-});
-
-export async function createSeriesAction(formData: FormData) {
+export async function adminLogoutAction(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
   try {
-    const name = formData.get("name");
-    const skuPrefix = formData.get("skuPrefix");
-    const mintLimit = formData.get("mintLimit");
-
-    if (!name || !skuPrefix || !mintLimit) {
-      throw new Error("Missing required fields");
-    }
-
-    const data = {
-      name: name.toString(),
-      skuPrefix: skuPrefix.toString(),
-      mintLimit: Number(mintLimit),
-      seriesNumber: skuPrefix.toString(), // Using skuPrefix as seriesNumber
-      totalPieces: Number(mintLimit), // Using mintLimit as totalPieces
-      currentMintNumber: 0, // Starting mint number
-    };
-
-    const parsed = seriesSchema.safeParse(data);
-    if (!parsed.success) {
-      throw new Error("Invalid series data");
-    }
-
-    await db.insert(series).values({
-      name: parsed.data.name,
-      seriesNumber: data.seriesNumber,
-      totalPieces: data.totalPieces,
-      currentMintNumber: data.currentMintNumber,
-    });
-
-    return { success: true, message: "Series created successfully" };
+    const cookieStore = await cookies();
+    cookieStore.delete("admin_token");
+    return { success: true };
   } catch (error) {
-    console.error("Error creating series:", error);
-    throw error;
+    console.error("Error during admin logout:", error);
+    return {
+      success: false,
+      error: "An error occurred during logout. Please try again.",
+    };
   }
 }

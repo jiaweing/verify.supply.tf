@@ -2,162 +2,93 @@
 
 import { db } from "@/db";
 import { series, skus } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
 
-export async function getAllSeries() {
-  try {
-    const allSeries = await db.query.series.findMany({
-      orderBy: [desc(series.createdAt)],
-    });
-    return allSeries;
-  } catch (error) {
-    console.error("Error fetching series:", error);
-    throw new Error("Failed to fetch series");
-  }
-}
-
-export async function createSeries(formData: FormData) {
-  try {
-    const name = formData.get("name")?.toString();
-    const seriesNumber = formData.get("seriesNumber")?.toString();
-    const totalPieces = Number(formData.get("totalPieces"));
-
-    if (!name || !seriesNumber || !totalPieces) {
-      throw new Error("Missing required fields");
-    }
-
-    const newSeries = await db
-      .insert(series)
-      .values({
-        name,
-        seriesNumber,
-        totalPieces,
-      })
-      .returning();
-
-    revalidatePath("/admin/series");
-    return newSeries[0];
-  } catch (error) {
-    console.error("Error creating series:", error);
-    throw error;
-  }
-}
-
-export async function getSeriesSkus(seriesId: string) {
-  try {
-    const seriesSkus = await db.query.skus.findMany({
-      where: eq(skus.seriesId, parseInt(seriesId)),
-    });
-    return seriesSkus;
-  } catch (error) {
-    console.error("Error fetching SKUs:", error);
-    throw new Error("Failed to fetch SKUs");
-  }
-}
-
-export async function getSeries(id: string) {
-  try {
-    const parsedId = parseInt(id);
-    if (isNaN(parsedId)) {
-      throw new Error("Invalid series ID");
-    }
-
-    const seriesItem = await db.query.series.findFirst({
-      where: eq(series.id, parsedId),
-    });
-
-    if (!seriesItem) {
-      throw new Error("Series not found");
-    }
-
-    return seriesItem;
-  } catch (error) {
-    console.error("Error fetching series:", error);
-    throw error;
-  }
-}
-
-export async function updateSeries(formData: FormData) {
+export async function updateSeriesAction(formData: FormData) {
   try {
     const id = formData.get("id")?.toString();
     const name = formData.get("name")?.toString();
     const seriesNumber = formData.get("seriesNumber")?.toString();
-    const totalPieces = Number(formData.get("totalPieces"));
+    const totalPieces = formData.get("totalPieces")?.toString();
 
     if (!id || !name || !seriesNumber || !totalPieces) {
-      throw new Error("Missing required fields");
+      return { success: false, error: "Missing required fields" };
     }
 
     const parsedId = parseInt(id);
     if (isNaN(parsedId)) {
-      throw new Error("Invalid series ID");
+      return { success: false, error: "Invalid series ID" };
     }
 
-    const updatedSeries = await db
+    const [updatedSeries] = await db
       .update(series)
       .set({
         name,
         seriesNumber,
-        totalPieces,
+        totalPieces: parseInt(totalPieces),
         updatedAt: new Date(),
       })
       .where(eq(series.id, parsedId))
       .returning();
 
-    if (!updatedSeries.length) {
-      throw new Error("Series not found");
+    if (!updatedSeries) {
+      return { success: false, error: "Series not found" };
     }
 
-    revalidatePath(`/admin/series/${id}`);
-    return updatedSeries[0];
+    return { success: true, data: updatedSeries };
   } catch (error) {
     console.error("Error updating series:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while updating the series",
+    };
   }
 }
 
-export async function deleteSeries(id: string) {
+export async function deleteSeriesAction(id: string) {
   try {
     const parsedId = parseInt(id);
     if (isNaN(parsedId)) {
-      throw new Error("Invalid series ID");
+      return { success: false, error: "Invalid series ID" };
     }
 
-    const deletedSeries = await db
+    const [deletedSeries] = await db
       .delete(series)
       .where(eq(series.id, parsedId))
       .returning();
 
-    if (!deletedSeries.length) {
-      throw new Error("Series not found");
+    if (!deletedSeries) {
+      return { success: false, error: "Series not found" };
     }
 
-    revalidatePath("/admin/series");
-    return { message: "Series deleted successfully" };
+    return { success: true, message: "Series deleted successfully" };
   } catch (error) {
     console.error("Error deleting series:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while deleting the series",
+    };
   }
 }
 
-export async function createSku(formData: FormData) {
+export async function createSkuAction(formData: FormData) {
   try {
     const seriesId = formData.get("seriesId")?.toString();
-    const code = formData.get("code") as string;
+    const code = formData.get("code")?.toString();
 
-    if (!seriesId) throw new Error("Series ID is required");
-    if (!code) throw new Error("SKU code is required");
+    if (!seriesId || !code) {
+      return { success: false, error: "Series ID and SKU code are required" };
+    }
 
     const existingSku = await db.query.skus.findFirst({
       where: eq(skus.code, code),
     });
 
     if (existingSku) {
-      throw new Error("SKU code already exists");
+      return { success: false, error: "SKU code already exists" };
     }
 
-    const newSku = await db
+    const [newSku] = await db
       .insert(skus)
       .values({
         code,
@@ -165,22 +96,23 @@ export async function createSku(formData: FormData) {
       })
       .returning();
 
-    revalidatePath(`/admin/series/${seriesId}`);
-    return newSku[0];
+    return { success: true, data: newSku };
   } catch (error) {
     console.error("Error creating SKU:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while creating the SKU",
+    };
   }
 }
 
-export async function updateSku(formData: FormData) {
+export async function updateSkuAction(formData: FormData) {
   try {
     const skuId = formData.get("id")?.toString();
-    const code = formData.get("code") as string;
-    const seriesId = formData.get("seriesId")?.toString();
+    const code = formData.get("code")?.toString();
 
     if (!skuId || !code) {
-      throw new Error("SKU ID and code are required");
+      return { success: false, error: "SKU ID and code are required" };
     }
 
     const existingSku = await db.query.skus.findFirst({
@@ -188,19 +120,21 @@ export async function updateSku(formData: FormData) {
     });
 
     if (existingSku && existingSku.id !== parseInt(skuId)) {
-      throw new Error("SKU code already exists");
+      return { success: false, error: "SKU code already exists" };
     }
 
-    const updatedSku = await db
+    const [updatedSku] = await db
       .update(skus)
       .set({ code })
       .where(eq(skus.id, parseInt(skuId)))
       .returning();
 
-    revalidatePath(`/admin/series/${seriesId}`);
-    return updatedSku[0];
+    return { success: true, data: updatedSku };
   } catch (error) {
     console.error("Error updating SKU:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while updating the SKU",
+    };
   }
 }

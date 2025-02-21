@@ -1,11 +1,13 @@
 "use client";
 
 import { adminLoginAction } from "@/app/admin/actions";
+import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { toast } from "sonner";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -22,10 +24,18 @@ export default function AdminLoginPage() {
       formData.append("email", email);
       formData.append("password", password);
 
-      await adminLoginAction(formData);
-      router.refresh();
+      const response = await adminLoginAction(formData);
+      if (response.success) {
+        toast.success("Logged in successfully");
+        router.push("/admin");
+      }
+
+      if (response.error) {
+        toast.error(response.error);
+      }
     } catch (error) {
       console.error("Login failed:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -34,9 +44,7 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 p-4">
-        <div className="flex justify-center mb-8">
-          <img src="/logo.svg" alt="SUPPLY: THE FUTURE" className="h-12" />
-        </div>
+        <Header />
         <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
         <Input
           type="email"

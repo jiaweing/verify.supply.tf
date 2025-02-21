@@ -80,7 +80,7 @@ export function OwnershipTable({
       // For admin view, override all preferences to visible
       const finalPrefs = isAdmin
         ? Object.fromEntries(Array.from(emails).map((email) => [email, true]))
-        : visibilityPrefs;
+        : visibilityPrefs.data ?? {};
 
       setVisibilityMap(finalPrefs);
       setLoading(false);
@@ -125,7 +125,7 @@ export function OwnershipTable({
           <TableCell>
             <Badge variant="secondary">Original</Badge>
           </TableCell>
-          <TableCell></TableCell>
+          <TableCell className="h-20"></TableCell>
         </TableRow>
 
         {/* Confirmed transfers from blockchain */}
@@ -154,7 +154,7 @@ export function OwnershipTable({
                 <TableCell>
                   {isLatestTransfer && <Badge variant="default">Current</Badge>}
                 </TableCell>
-                <TableCell></TableCell>
+                <TableCell className="h-20"></TableCell>
               </TableRow>
             );
           })}
@@ -191,7 +191,7 @@ export function OwnershipTable({
                   Pending
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="h-20">
                 <CancelTransferButton
                   itemId={item.id}
                   transferId={history.id}

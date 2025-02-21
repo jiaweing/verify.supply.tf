@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sku } from "@/db/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,12 +24,25 @@ const skuFormSchema = z.object({
 type SkuFormValues = z.infer<typeof skuFormSchema>;
 
 type SkuFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ActionResponse>;
   initialData?: Sku;
   seriesId: string;
 };
 
+interface ActionResponse {
+  success: boolean;
+  error?: string;
+  data?: {
+    code: string;
+    id: number;
+    createdAt: Date;
+    updatedAt: Date;
+    seriesId: number;
+  };
+}
+
 export function SkuForm({ action, initialData, seriesId }: SkuFormProps) {
+  const router = useRouter();
   const form = useForm<SkuFormValues>({
     resolver: zodResolver(skuFormSchema),
     defaultValues: {
@@ -45,6 +59,9 @@ export function SkuForm({ action, initialData, seriesId }: SkuFormProps) {
       if (!initialData) {
         form.reset();
       }
+
+      toast.success("SKU saved successfully");
+      return router.refresh();
     } catch (error) {
       console.error("Error submitting form:", error);
       if (error instanceof Error) {

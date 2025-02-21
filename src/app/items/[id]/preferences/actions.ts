@@ -26,12 +26,20 @@ export async function getVisibilityPreferencesAction(emails: string[]) {
     });
 
     // Convert to map of email -> visibility
-    return Object.fromEntries(
+    const visibilityMap = Object.fromEntries(
       preferences.map((pref) => [pref.email, pref.visible])
     );
+
+    return {
+      success: true,
+      data: visibilityMap,
+    };
   } catch (error) {
     console.error("Error fetching visibility preferences:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while fetching visibility preferences",
+    };
   }
 }
 
@@ -43,18 +51,21 @@ export async function updateItemPreferencesAction(
   try {
     // Validate authentication
     if (!sessionToken) {
-      throw new Error("Authentication required");
+      return { success: false, error: "Authentication required" };
     }
 
     const authenticatedItemId = await validateSession(sessionToken);
     if (!authenticatedItemId) {
-      throw new Error("Invalid or expired session");
+      return { success: false, error: "Invalid or expired session" };
     }
 
     // Validate UUID format
     const validatedId = uuidSchema.parse(itemId);
     if (authenticatedItemId !== validatedId) {
-      throw new Error("Unauthorized to update this item's preferences");
+      return {
+        success: false,
+        error: "Unauthorized to update this item's preferences",
+      };
     }
 
     // Get item with transactions to verify ownership
@@ -70,13 +81,13 @@ export async function updateItemPreferencesAction(
     });
 
     if (!item) {
-      throw new Error("Item not found");
+      return { success: false, error: "Item not found" };
     }
 
     // Verify ownership
     const currentOwner = getCurrentOwner(item.transactions, item);
     if (!currentOwner) {
-      throw new Error("Could not determine current owner");
+      return { success: false, error: "Could not determine current owner" };
     }
 
     const { showOwnershipHistory } = updatePreferencesSchema.parse(preferences);
@@ -104,6 +115,9 @@ export async function updateItemPreferencesAction(
     };
   } catch (error) {
     console.error("Error updating preferences:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while updating preferences",
+    };
   }
 }

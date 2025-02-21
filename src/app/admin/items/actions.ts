@@ -50,9 +50,10 @@ export async function createItemAction(formData: FormData) {
     // Validate input
     const parsed = itemSchema.safeParse(data);
     if (!parsed.success) {
-      throw new Error(
-        "Validation failed: " + JSON.stringify(parsed.error.issues)
-      );
+      return {
+        success: false,
+        error: "Validation failed: " + JSON.stringify(parsed.error.issues),
+      };
     }
 
     // Get or create current encryption key
@@ -78,7 +79,10 @@ export async function createItemAction(formData: FormData) {
       const masterKey = Buffer.from(masterKeyHex, "hex");
 
       if (masterKey.length !== 32) {
-        throw new Error("MASTER_KEY must be a 32-byte hex string");
+        return {
+          success: false,
+          error: "MASTER_KEY must be a 32-byte hex string",
+        };
       }
 
       // Encrypt item key directly using EncryptionService
@@ -103,7 +107,10 @@ export async function createItemAction(formData: FormData) {
       const masterKey = Buffer.from(masterKeyHex, "hex");
 
       if (masterKey.length !== 32) {
-        throw new Error("MASTER_KEY must be a 32-byte hex string");
+        return {
+          success: false,
+          error: "MASTER_KEY must be a 32-byte hex string",
+        };
       }
 
       const encryptedKey = Buffer.from(recentKey.encryptedKey, "base64");
@@ -126,12 +133,12 @@ export async function createItemAction(formData: FormData) {
     });
 
     if (!seriesRecord) {
-      throw new Error("Series not found");
+      return { success: false, error: "Series not found" };
     }
 
     // Check if we've reached the series limit
     if (seriesRecord.currentMintNumber >= seriesRecord.totalPieces) {
-      throw new Error("Series limit reached");
+      return { success: false, error: "Series limit reached" };
     }
 
     // Update series mint number
@@ -268,9 +275,19 @@ export async function createItemAction(formData: FormData) {
       });
     });
 
-    return { success: true, message: "Item created successfully" };
+    return {
+      success: true,
+      message: "Item created successfully",
+      data: {
+        itemId,
+        nfcLink,
+      },
+    };
   } catch (error) {
     console.error("Error creating item:", error);
-    throw error;
+    return {
+      success: false,
+      error: "An error occurred while creating the item. Please try again.",
+    };
   }
 }
