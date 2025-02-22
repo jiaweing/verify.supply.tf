@@ -16,6 +16,45 @@ A blockchain-based physical asset verification and ownership tracking system bui
 
 verify.supply.tf is a robust blockchain-based verification system designed to track and verify the authenticity and ownership of physical products. It creates an immutable digital record for each item, enabling secure ownership transfers and authenticity verification through NFC integration.
 
+## NFT-Like Characteristics
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🎯 Core NFT Features
+
+- **🆔 Unique Identification**  
+  UUID, serial number, and NFC chip per item
+- **💎 Non-Fungibility**  
+  Unique mint numbers and series tracking
+- **👥 Ownership Tracking**  
+  Complete blockchain-based history
+- **🔄 Secure Transfers**  
+  Two-step email verification process
+- **📜 Provenance**  
+  Immutable creation and transfer records
+
+</td>
+<td width="50%">
+
+#### 🔸 Key Differentiators
+
+- **⛓️ Private Chain**  
+  Custom blockchain optimized for verification
+- **📲 Physical Linkage**  
+  NFC tags connect digital to physical
+- **✉️ Email Ownership**  
+  Email-based vs crypto wallets
+- **⏳ Transfer Cooldowns**  
+  Built-in safety periods
+- **📦 Series Tracking**  
+  Limited editions with piece counts
+
+</td>
+</tr>
+</table>
+
 ## Features
 
 | Feature                        | Description                                                         |

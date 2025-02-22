@@ -1,4 +1,5 @@
 import { AdminLogoutButton } from "@/components/admin-logout-button";
+import Link from "next/link";
 import { Toaster } from "sonner";
 
 interface AdminLayoutProps {
@@ -7,28 +8,29 @@ interface AdminLayoutProps {
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="min-h-screen bg-background w-screen">
+      <header className="sticky top-0 z-50 w-screen border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container max-w-7xl md:px-0 px-8 mx-auto flex h-14 items-center">
           <div className="mr-4 flex">
             <a href="/admin" className="mr-6 flex items-center space-x-2">
-              <span className="font-semibold inline-block">
+              <span className="font-semibold hidden md:inline-block">
                 SUPPLY: THE FUTURE
               </span>
+              <span className="font-semibold md:hidden">supply.tf</span>
             </a>
             <nav className="flex items-center space-x-6 text-sm font-medium">
-              <a
+              <Link
                 href="/admin"
                 className="transition-colors hover:text-foreground/80 text-foreground"
               >
                 Items
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/admin/series"
                 className="transition-colors hover:text-foreground/80 text-foreground"
               >
                 Series
-              </a>
+              </Link>
             </nav>
           </div>
           <Toaster richColors position="top-center" />

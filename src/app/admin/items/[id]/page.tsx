@@ -98,7 +98,7 @@ export default async function ItemPage(props: {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Item Details</h1>
         <Button asChild variant="outline">

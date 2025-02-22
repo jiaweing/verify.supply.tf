@@ -214,7 +214,7 @@ export default async function ItemVerificationPage(props: {
               </dd>
             </div>
             <div>
-              <dt className="font-medium mb-1">Weight</dt>
+              <dt className="font-medium mb-1">Weight (g)</dt>
               <dd className="text-muted-foreground">{item.weight}</dd>
             </div>
           </dl>

@@ -110,7 +110,7 @@ export default async function TransferConfirmPage({
               </div>
               {item.weight && (
                 <div>
-                  <span className="font-medium">Weight:</span> {item.weight}
+                  <span className="font-medium">Weight (g):</span> {item.weight}
                 </div>
               )}
               <div>

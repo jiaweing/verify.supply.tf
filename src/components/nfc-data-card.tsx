@@ -29,8 +29,8 @@ export function NfcDataCard({
           <div>
             <dt className="font-medium">NFC Link</dt>
             <dd className="text-muted-foreground font-mono text-sm break-all mt-1">
-              <div className="flex items-center gap-2">
-                <span>{nfcLink}</span>
+              <div className="flex items-start gap-2">
+                <span className="flex-1">{nfcLink}</span>
                 <Button
                   variant="outline"
                   size="sm"

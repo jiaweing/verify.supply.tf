@@ -286,7 +286,7 @@ export function CreateItemForm() {
               name="weight"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Weight</FormLabel>
+                  <FormLabel>Weight (g)</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter weight" {...field} />
                   </FormControl>
